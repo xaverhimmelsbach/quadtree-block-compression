@@ -11,21 +11,21 @@ type QuadtreeImage struct {
 }
 
 // TODO: Implement
-func (*QuadtreeImage) Partition() {
+func (q *QuadtreeImage) Partition() {
 	fmt.Println("Partitioning QuadtreeImage")
 }
 
 // TODO: Implement
-func (*QuadtreeImage) Encode() {
+func (q *QuadtreeImage) Encode() {
 	fmt.Println("Encoding QuadtreeImage")
 }
 
 // TODO: Implement
-func (*QuadtreeImage) WriteFile(path string) {
+func (q *QuadtreeImage) WriteFile(path string) {
 	fmt.Printf("Writing QuadtreeImage to %q\n", path)
 }
 
 // TODO: Implement
-func (*QuadtreeImage) Visualize(path string) {
+func (q *QuadtreeImage) Visualize(path string) {
 	fmt.Printf("Visualizing QuadtreeImage to %q\n", path)
 }

@@ -12,16 +12,16 @@ type QuadtreeElement struct {
 }
 
 // TODO: Implement
-func (*QuadtreeElement) partition() {
+func (q *QuadtreeElement) partition() {
 	fmt.Println("Partitioning QuadtreeElement")
 }
 
 // TODO: Implement
-func (*QuadtreeElement) createDownsampledImage() {
+func (q *QuadtreeElement) createDownsampledImage() {
 	fmt.Println("Creating Downsampled Image")
 }
 
 // TODO: Implement
-func (*QuadtreeElement) compareImages() {
+func (q *QuadtreeElement) compareImages() {
 	fmt.Println("Comparing Images")
 }
