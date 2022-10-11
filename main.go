@@ -4,13 +4,23 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"os"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/quadtreeImage"
 )
 
-// TODO: Implement
-func readImage(path string) (image image.Image, err error) {
-	return image, err
+// readImage Takes the path to an image file in the file system and returns the decoded image
+func readImage(path string) (img image.Image, err error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return img, err
+	}
+
+	defer file.Close()
+	img, _, err = image.Decode(file)
+	return img, err
 }
 
 func main() {
@@ -20,14 +30,14 @@ func main() {
 	flag.Parse()
 
 	// Read image from file system
-	image, err := readImage(*inputPath)
+	img, err := readImage(*inputPath)
 	if err != nil {
 		panic(err)
 	}
 
 	// Create quadtree image representation
 	quadtreeImage := quadtreeImage.QuadtreeImage{
-		BaseImage: image,
+		BaseImage: img,
 	}
 
 	// Partition image into a quadtree structure
