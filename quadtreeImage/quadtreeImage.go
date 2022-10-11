@@ -7,6 +7,7 @@ import (
 
 type QuadtreeImage struct {
 	BaseImage image.Image
+	Children  []*QuadtreeElement
 }
 
 // TODO: Implement
