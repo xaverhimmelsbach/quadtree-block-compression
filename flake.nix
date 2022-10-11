@@ -19,6 +19,7 @@
             gopls
             go-outline
             gopkgs
+            delve
           ];
         };
       });
