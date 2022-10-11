@@ -5,16 +5,16 @@ type QuadtreeImage struct {
 }
 
 // TODO: Implement
-func (*QuadtreeImage) partition() {
+func (*QuadtreeImage) Partition() {
 
 }
 
 // TODO: Implement
-func (*QuadtreeImage) encode() {
+func (*QuadtreeImage) Encode() {
 
 }
 
 // TODO: Implement
-func (*QuadtreeImage) writeFile(path string) {
+func (*QuadtreeImage) WriteFile(path string) {
 
 }
