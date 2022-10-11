@@ -1,0 +1,20 @@
+package quadtreeImage
+
+type QuadtreeImage struct {
+	BaseImage image.Image
+}
+
+// TODO: Implement
+func (*QuadtreeImage) partition() {
+
+}
+
+// TODO: Implement
+func (*QuadtreeImage) encode() {
+
+}
+
+// TODO: Implement
+func (*QuadtreeImage) writeFile(path string) {
+
+}
