@@ -24,3 +24,8 @@ func (*QuadtreeImage) Encode() {
 func (*QuadtreeImage) WriteFile(path string) {
 	fmt.Printf("Writing QuadtreeImage to %q\n", path)
 }
+
+// TODO: Implement
+func (*QuadtreeImage) Visualize(path string) {
+	fmt.Printf("Visualizing QuadtreeImage to %q\n", path)
+}

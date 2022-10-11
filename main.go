@@ -36,6 +36,9 @@ func main() {
 	// Encode quadtree structure
 	quadtreeImage.Encode()
 
+	// Visualize quadtree structure
+	quadtreeImage.Visualize(*outputPath)
+
 	// Write quadtree structure to output
 	quadtreeImage.WriteFile(*outputPath)
 
