@@ -3,25 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image"
-	_ "image/jpeg"
-	_ "image/png"
-	"os"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/quadtreeImage"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 )
-
-// readImage Takes the path to an image file in the file system and returns the decoded image
-func readImage(path string) (img image.Image, err error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return img, err
-	}
-
-	defer file.Close()
-	img, _, err = image.Decode(file)
-	return img, err
-}
 
 func main() {
 	// Parse arguments
@@ -30,7 +15,7 @@ func main() {
 	flag.Parse()
 
 	// Read image from file system
-	img, err := readImage(*inputPath)
+	img, err := utils.ReadImage(*inputPath)
 	if err != nil {
 		panic(err)
 	}
