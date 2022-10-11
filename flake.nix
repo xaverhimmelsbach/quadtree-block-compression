@@ -12,13 +12,13 @@
       in
       {
         devShell = pkgs.mkShell {
-          buildInputs = [
-            pkgs.go
-            pkgs.gotools
-            pkgs.golangci-lint
-            pkgs.gopls
-            pkgs.go-outline
-            pkgs.gopkgs
+          buildInputs = with pkgs;[
+            go
+            gotools
+            golangci-lint
+            gopls
+            go-outline
+            gopkgs
           ];
         };
       });
