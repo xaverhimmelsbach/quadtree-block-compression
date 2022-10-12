@@ -1,2 +1,5 @@
 .vscode/
 .direnv/
+
+*.jpg
+*.png
