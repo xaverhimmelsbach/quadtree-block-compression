@@ -21,12 +21,10 @@ func main() {
 	}
 
 	// Create quadtree image representation
-	quadtreeImage := quadtreeImage.QuadtreeImage{
-		BaseImage: img,
-	}
+	quadtreeImage := quadtreeImage.QuadtreeImage{}
 
 	// Partition image into a quadtree structure
-	quadtreeImage.Partition()
+	quadtreeImage.Partition(img)
 
 	// Encode quadtree structure
 	quadtreeImage.Encode()

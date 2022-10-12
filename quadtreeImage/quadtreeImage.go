@@ -10,20 +10,22 @@ import (
 )
 
 type QuadtreeImage struct {
-	BaseImage   image.Image
-	PaddedImage image.Image
-	Child       *QuadtreeElement
+	baseImage   image.Image
+	paddedImage image.Image
+	child       *QuadtreeElement
 }
 
 // Partition splits the BaseImage into an appropriate number of sub images and calls their partition method
-func (q *QuadtreeImage) Partition() {
+func (q *QuadtreeImage) Partition(baseImage image.Image) {
+	q.baseImage = baseImage
+
 	q.pad()
 
-	childImage := image.NewRGBA(image.Rect(0, 0, q.PaddedImage.Bounds().Max.X-1, q.PaddedImage.Bounds().Max.Y-1))
-	draw.Draw(childImage, childImage.Bounds(), q.PaddedImage, q.PaddedImage.Bounds().Min, draw.Src)
+	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X-1, q.paddedImage.Bounds().Max.Y-1))
+	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
 
-	q.Child = &QuadtreeElement{BaseImage: childImage}
-	q.Child.partition()
+	q.child = &QuadtreeElement{}
+	q.child.partition(childImage)
 }
 
 // TODO: Implement
@@ -38,15 +40,15 @@ func (q *QuadtreeImage) WriteFile(path string) {
 
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage
 func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, error) {
-	rects := q.Child.visualize()
-	baseBounds := q.BaseImage.Bounds()
-	paddedBounds := q.PaddedImage.Bounds()
+	rects := q.child.visualize()
+	baseBounds := q.baseImage.Bounds()
+	paddedBounds := q.paddedImage.Bounds()
 
 	baseImage := image.NewRGBA(image.Rect(0, 0, baseBounds.Dx(), baseBounds.Dy()))
-	draw.Draw(baseImage, baseImage.Bounds(), q.BaseImage, baseBounds.Min, draw.Src)
+	draw.Draw(baseImage, baseImage.Bounds(), q.baseImage, baseBounds.Min, draw.Src)
 
 	paddedImage := image.NewRGBA(image.Rect(0, 0, paddedBounds.Dx(), paddedBounds.Dy()))
-	draw.Draw(paddedImage, paddedImage.Bounds(), q.PaddedImage, paddedBounds.Min, draw.Src)
+	draw.Draw(paddedImage, paddedImage.Bounds(), q.paddedImage, paddedBounds.Min, draw.Src)
 
 	for _, rect := range rects {
 		utils.Rectangle(baseImage, rect.Min.X, rect.Max.X, rect.Min.Y, rect.Max.Y, color.RGBA{R: 255, A: 255})
@@ -58,7 +60,7 @@ func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, error)
 
 // pad adds transparent padding to a copy of BaseImage to make it a square with an edge length that can be divided by a multiple of four to get a JPEG block
 func (q *QuadtreeImage) pad() {
-	baseBounds := q.BaseImage.Bounds()
+	baseBounds := q.baseImage.Bounds()
 	var longerSideLength int
 	paddedSideLength := 8
 
@@ -76,7 +78,7 @@ func (q *QuadtreeImage) pad() {
 
 	// Copy BaseImage over padded image
 	paddedImage := image.NewRGBA(image.Rect(0, 0, paddedSideLength, paddedSideLength))
-	draw.Draw(paddedImage, paddedImage.Bounds(), q.BaseImage, q.BaseImage.Bounds().Min, draw.Src)
+	draw.Draw(paddedImage, paddedImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
-	q.PaddedImage = paddedImage
+	q.paddedImage = paddedImage
 }

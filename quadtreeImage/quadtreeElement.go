@@ -7,14 +7,15 @@ import (
 )
 
 type QuadtreeElement struct {
-	BaseImage        image.Image
-	DownsampledImage image.Image
-	Children         []*QuadtreeElement
+	baseImage        image.Image
+	downsampledImage image.Image
+	children         []*QuadtreeElement
 }
 
 // partition splits the BaseImage into four sub images, if further partitioning is necessary and calls their partition methods
-func (q *QuadtreeElement) partition() {
-	q.Children = make([]*QuadtreeElement, 0)
+func (q *QuadtreeElement) partition(baseImage image.Image) {
+	q.baseImage = baseImage
+	q.children = make([]*QuadtreeElement, 0)
 
 	if q.furtherPartitioningNecessary() {
 		// Partition BaseImage into 4 sub images
@@ -26,37 +27,37 @@ func (q *QuadtreeElement) partition() {
 
 			// Set x coordinates
 			if i&1 == 0 {
-				xStart = q.BaseImage.Bounds().Min.X
-				xEnd = q.BaseImage.Bounds().Min.X + q.BaseImage.Bounds().Dx()/2
+				xStart = q.baseImage.Bounds().Min.X
+				xEnd = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
 			} else {
-				xStart = q.BaseImage.Bounds().Min.X + q.BaseImage.Bounds().Dx()/2
-				xEnd = q.BaseImage.Bounds().Max.X
+				xStart = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
+				xEnd = q.baseImage.Bounds().Max.X
 			}
 
 			// Set y coordinates
 			if i&2 == 0 {
-				yStart = q.BaseImage.Bounds().Min.Y
-				yEnd = q.BaseImage.Bounds().Min.Y + q.BaseImage.Bounds().Dy()/2
+				yStart = q.baseImage.Bounds().Min.Y
+				yEnd = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
 			} else {
-				yStart = q.BaseImage.Bounds().Min.Y + q.BaseImage.Bounds().Dy()/2
-				yEnd = q.BaseImage.Bounds().Max.Y
+				yStart = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
+				yEnd = q.baseImage.Bounds().Max.Y
 			}
 
 			// Copy BaseImage section to sub image
-			img := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
-			draw.Draw(img, img.Bounds(), q.BaseImage, q.BaseImage.Bounds().Min, draw.Src)
+			childImage := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
+			draw.Draw(childImage, childImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
-			child := &QuadtreeElement{BaseImage: img}
-			q.Children = append(q.Children, child)
-			child.partition()
+			child := &QuadtreeElement{}
+			q.children = append(q.children, child)
+			child.partition(childImage)
 		}
 	}
 }
 
 // TODO: Placeholder condition
 func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
-	return q.BaseImage.Bounds().Dx() > 200 || q.BaseImage.Bounds().Dy() > 200
+	return q.baseImage.Bounds().Dx() > 200 || q.baseImage.Bounds().Dy() > 200
 }
 
 // TODO: Implement
@@ -73,13 +74,13 @@ func (q *QuadtreeElement) compareImages() {
 func (q *QuadtreeElement) visualize() []image.Rectangle {
 	rects := make([]image.Rectangle, 0)
 
-	if len(q.Children) == 0 {
-		rects = append(rects, q.BaseImage.Bounds())
+	if len(q.children) == 0 {
+		rects = append(rects, q.baseImage.Bounds())
 	} else {
-		rects = append(rects, q.Children[0].visualize()...)
-		rects = append(rects, q.Children[1].visualize()...)
-		rects = append(rects, q.Children[2].visualize()...)
-		rects = append(rects, q.Children[3].visualize()...)
+		rects = append(rects, q.children[0].visualize()...)
+		rects = append(rects, q.children[1].visualize()...)
+		rects = append(rects, q.children[2].visualize()...)
+		rects = append(rects, q.children[3].visualize()...)
 	}
 
 	return rects
