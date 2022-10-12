@@ -65,7 +65,7 @@ func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
 // createDownsampledImage creates a representation of the base image that has been scaled down to the size of a JPEG block
 func (q *QuadtreeElement) createDownsampledImage() {
 	baseImage := q.baseImage.(*image.RGBA)
-	downsampledImage := utils.Scale(baseImage, 8, 8)
+	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8)
 	q.downsampledImage = downsampledImage
 }
 
