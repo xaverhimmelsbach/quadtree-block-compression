@@ -21,7 +21,7 @@ func (q *QuadtreeImage) Partition(baseImage image.Image) {
 
 	q.pad()
 
-	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X-1, q.paddedImage.Bounds().Max.Y-1))
+	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
 
 	q.child = &QuadtreeElement{}
