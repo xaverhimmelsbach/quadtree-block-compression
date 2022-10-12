@@ -14,9 +14,18 @@ type QuadtreeImage struct {
 	Children  []*QuadtreeElement
 }
 
-// TODO: Implement
+// Partition splits the BaseImage into an appropriate number of sub images and calls their partition method
 func (q *QuadtreeImage) Partition() {
-	fmt.Println("Partitioning QuadtreeImage")
+	// TODO: create more than one child
+	childImage := image.NewRGBA(image.Rect(0, 0, q.BaseImage.Bounds().Max.X-1, q.BaseImage.Bounds().Max.Y-1))
+	draw.Draw(childImage, childImage.Bounds(), q.BaseImage, q.BaseImage.Bounds().Min, draw.Src)
+
+	q.Children = make([]*QuadtreeElement, 0)
+	q.Children = append(q.Children, &QuadtreeElement{BaseImage: childImage})
+
+	for _, child := range q.Children {
+		child.partition()
+	}
 }
 
 // TODO: Implement
