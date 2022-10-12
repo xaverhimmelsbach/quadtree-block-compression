@@ -3,6 +3,8 @@ package utils
 import (
 	"image"
 	"image/color"
+
+	"golang.org/x/image/draw"
 )
 
 // HorizontalLine draws a horizontal line onto an image
@@ -25,4 +27,14 @@ func Rectangle(img *image.RGBA, xStart int, xEnd int, yStart int, yEnd int, c co
 	HorizontalLine(img, xStart, xEnd, yEnd, c)
 	VerticalLine(img, yStart, yEnd, xStart, c)
 	VerticalLine(img, yStart, yEnd, xEnd, c)
+}
+
+// Scale scales a given image to the desired width and height
+func Scale(img *image.RGBA, desiredWidth int, desiredHeight int) image.Image {
+	originalBounds := img.Bounds()
+	scaledImage := image.NewRGBA(image.Rect(0, 0, desiredWidth, desiredHeight))
+
+	// TODO: evaluate other algorithms
+	draw.NearestNeighbor.Scale(scaledImage, scaledImage.Bounds(), img, originalBounds, draw.Over, nil)
+	return scaledImage
 }

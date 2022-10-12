@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+
+	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 )
 
 type QuadtreeElement struct {
@@ -60,9 +62,11 @@ func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
 	return q.baseImage.Bounds().Dx() > 200 || q.baseImage.Bounds().Dy() > 200
 }
 
-// TODO: Implement
+// createDownsampledImage creates a representation of the base image that has been scaled down to the size of a JPEG block
 func (q *QuadtreeElement) createDownsampledImage() {
-	fmt.Println("Creating Downsampled Image")
+	baseImage := q.baseImage.(*image.RGBA)
+	downsampledImage := utils.Scale(baseImage, 8, 8)
+	q.downsampledImage = downsampledImage
 }
 
 // TODO: Implement
