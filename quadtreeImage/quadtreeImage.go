@@ -25,7 +25,7 @@ func (q *QuadtreeImage) Partition(baseImage image.Image) {
 	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
 
 	q.child = &QuadtreeElement{}
-	q.child.partition(childImage)
+	q.child.partition(childImage, q.baseImage.Bounds())
 }
 
 // TODO: Implement

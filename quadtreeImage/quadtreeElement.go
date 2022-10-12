@@ -1,7 +1,6 @@
 package quadtreeImage
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
 
@@ -12,12 +11,16 @@ type QuadtreeElement struct {
 	baseImage        image.Image
 	downsampledImage image.Image
 	children         []*QuadtreeElement
+	globalBounds     image.Rectangle
 }
 
 // partition splits the BaseImage into four sub images, if further partitioning is necessary and calls their partition methods
-func (q *QuadtreeElement) partition(baseImage image.Image) {
+func (q *QuadtreeElement) partition(baseImage image.Image, globalBounds image.Rectangle) {
 	q.baseImage = baseImage
+	q.globalBounds = globalBounds
 	q.children = make([]*QuadtreeElement, 0)
+
+	q.createDownsampledImage()
 
 	if q.furtherPartitioningNecessary() {
 		// Partition BaseImage into 4 sub images
@@ -52,14 +55,23 @@ func (q *QuadtreeElement) partition(baseImage image.Image) {
 			// Create and partition child
 			child := &QuadtreeElement{}
 			q.children = append(q.children, child)
-			child.partition(childImage)
+			child.partition(childImage, q.globalBounds)
 		}
 	}
 }
 
-// TODO: Placeholder condition
+// furtherPartitioningNecessary decides whether the current element needs to be split into four smaller ones.
+// The decision is made upon the similarity of the JPEG block to the original base image
 func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
-	return q.baseImage.Bounds().Dx() > 200 || q.baseImage.Bounds().Dy() > 200
+	// If the size of a JPEG block was reached, don't partition further
+	if q.baseImage.Bounds().Dx() <= 8 || q.baseImage.Bounds().Dy() <= 8 {
+		return false
+	}
+
+	// All blocks with a similarity of less than this need to be split further
+	cutoff := 0.1
+
+	return q.compareImages() < cutoff
 }
 
 // createDownsampledImage creates a representation of the base image that has been scaled down to the size of a JPEG block
@@ -69,9 +81,23 @@ func (q *QuadtreeElement) createDownsampledImage() {
 	q.downsampledImage = downsampledImage
 }
 
-// TODO: Implement
-func (q *QuadtreeElement) compareImages() {
-	fmt.Println("Comparing Images")
+// compareImages compares the scaled down JPEG block with the base image of this element
+func (q *QuadtreeElement) compareImages() float64 {
+	baseImage := q.baseImage.(*image.RGBA)
+	baseBounds := baseImage.Bounds()
+
+	downsampledImage := q.downsampledImage.(*image.RGBA)
+	upsampledImage := utils.Scale(downsampledImage,
+		baseBounds.Min.X, baseBounds.Min.Y,
+		baseBounds.Max.X, baseBounds.Max.Y).(*image.RGBA)
+
+	similarity, err := utils.ComparePixels(upsampledImage, baseImage, q.globalBounds)
+	// TODO: Handle errors better
+	if err != nil {
+		panic(err)
+	}
+
+	return similarity
 }
 
 // visualize returns its own bounding box if it has no children, else it returns its childrens bounding boxes
