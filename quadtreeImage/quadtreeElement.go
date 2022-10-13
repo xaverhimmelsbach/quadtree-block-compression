@@ -101,11 +101,11 @@ func (q *QuadtreeElement) compareImages() float64 {
 }
 
 // visualize returns its own bounding box if it has no children, else it returns its childrens bounding boxes
-func (q *QuadtreeElement) visualize() []image.Rectangle {
-	rects := make([]image.Rectangle, 0)
+func (q *QuadtreeElement) visualize() []image.Image {
+	rects := make([]image.Image, 0)
 
 	if len(q.children) == 0 {
-		rects = append(rects, q.baseImage.Bounds())
+		rects = append(rects, q.blockImage)
 	} else {
 		rects = append(rects, q.children[0].visualize()...)
 		rects = append(rects, q.children[1].visualize()...)

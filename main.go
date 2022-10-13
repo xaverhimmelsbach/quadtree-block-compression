@@ -30,12 +30,14 @@ func main() {
 	quadtreeImage.Encode()
 
 	// Visualize quadtree structure
-	baseVisualization, paddedVisualization, err := quadtreeImage.Visualize(*outputPath)
+	baseVisualization, paddedVisualization, baseBlockVisualization, paddedBlockVisualization, err := quadtreeImage.Visualize(*outputPath)
 	if err != nil {
 		panic(err)
 	}
 	utils.WriteImage("visualizationBase.png", baseVisualization)
 	utils.WriteImage("visualizationPadded.png", paddedVisualization)
+	utils.WriteImage("visualizationBlockBase.png", baseBlockVisualization)
+	utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
 
 	// Write quadtree structure to output
 	quadtreeImage.WriteFile(*outputPath)
