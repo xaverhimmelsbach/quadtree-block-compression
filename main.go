@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// Create quadtree image representation
-	quadtreeRoot := quadtreeImage.NewQuadtreeImage(img)
+	quadtreeRoot := quadtreeImage.NewQuadtreeImage(img, cfg)
 
 	// Partition image into a quadtree structure
 	quadtreeRoot.Partition()

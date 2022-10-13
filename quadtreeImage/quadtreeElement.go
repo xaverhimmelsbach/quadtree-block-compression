@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/draw"
 
+	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 	drawX "golang.org/x/image/draw"
 )
@@ -14,11 +15,13 @@ type QuadtreeElement struct {
 	children     []*QuadtreeElement
 	globalBounds image.Rectangle
 	isLeaf       bool
+	config       *config.Config
 }
 
-func NewQuadtreeElement(baseImage image.Image, globalBounds image.Rectangle) *QuadtreeElement {
+func NewQuadtreeElement(baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
 
+	qte.config = cfg
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
 	qte.blockImage = qte.createBlockImage()
@@ -62,7 +65,7 @@ func (q *QuadtreeElement) partition() {
 			draw.Draw(childImage, childImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
-			child := NewQuadtreeElement(childImage, q.globalBounds)
+			child := NewQuadtreeElement(childImage, q.globalBounds, q.config)
 			q.children = append(q.children, child)
 			child.partition()
 		}

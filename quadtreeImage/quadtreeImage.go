@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/draw"
 
+	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 )
 
@@ -13,12 +14,14 @@ type QuadtreeImage struct {
 	baseImage   image.Image
 	paddedImage image.Image
 	child       *QuadtreeElement
+	config      *config.Config
 }
 
 // NewQuadtreeImage constructs a well-formed instance of QuadtreeImage from a baseImage
-func NewQuadtreeImage(baseImage image.Image) *QuadtreeImage {
+func NewQuadtreeImage(baseImage image.Image, cfg *config.Config) *QuadtreeImage {
 	qti := new(QuadtreeImage)
 
+	qti.config = cfg
 	qti.baseImage = baseImage
 	qti.paddedImage = qti.pad()
 
@@ -30,7 +33,7 @@ func (q *QuadtreeImage) Partition() {
 	// Create root of the quadtree
 	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
-	q.child = NewQuadtreeElement(childImage, q.baseImage.Bounds())
+	q.child = NewQuadtreeElement(childImage, q.baseImage.Bounds(), q.config)
 
 	// Start partitioning the quadtree
 	q.child.partition()
