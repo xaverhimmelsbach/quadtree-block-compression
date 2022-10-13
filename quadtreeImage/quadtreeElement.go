@@ -21,7 +21,7 @@ func NewQuadtreeElement(baseImage image.Image, globalBounds image.Rectangle) *Qu
 
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
-	// TODO: construct blockImage seperately
+	qte.blockImage = qte.createBlockImage()
 	qte.isLeaf = !qte.furtherPartitioningNecessary()
 
 	return qte
@@ -83,25 +83,25 @@ func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
 	return q.compareImages() < cutoff
 }
 
-// createDownsampledImage creates a representation of the base image that has been scaled down to the size of a JPEG block
-func (q *QuadtreeElement) createDownsampledImage() image.Image {
+// createBlockImage scales the baseImage down to the size of a JPEG block and then scales it back up to the original size
+func (q *QuadtreeElement) createBlockImage() image.Image {
 	baseImage := q.baseImage.(*image.RGBA)
-	return utils.Scale(baseImage, 0, 0, 8, 8, drawX.CatmullRom)
+	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8, drawX.NearestNeighbor).(*image.RGBA)
+
+	blockImage := utils.Scale(downsampledImage,
+		q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y,
+		q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y,
+		drawX.NearestNeighbor).(*image.RGBA)
+
+	return blockImage
 }
 
 // compareImages compares the scaled down JPEG block with the base image of this element
 func (q *QuadtreeElement) compareImages() float64 {
 	baseImage := q.baseImage.(*image.RGBA)
-	baseBounds := baseImage.Bounds()
+	blockImage := q.blockImage.(*image.RGBA)
 
-	downsampledImage := q.createDownsampledImage().(*image.RGBA)
-	upsampledImage := utils.Scale(downsampledImage,
-		baseBounds.Min.X, baseBounds.Min.Y,
-		baseBounds.Max.X, baseBounds.Max.Y,
-		drawX.NearestNeighbor).(*image.RGBA)
-	q.blockImage = upsampledImage
-
-	similarity, err := utils.ComparePixelsWeighted(upsampledImage, baseImage, q.globalBounds)
+	similarity, err := utils.ComparePixelsWeighted(blockImage, baseImage, q.globalBounds)
 	// TODO: Handle errors better
 	if err != nil {
 		panic(err)
