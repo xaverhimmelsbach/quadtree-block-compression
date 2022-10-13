@@ -5,6 +5,7 @@ import (
 	"image/draw"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
+	drawX "golang.org/x/image/draw"
 )
 
 type QuadtreeElement struct {
@@ -77,7 +78,7 @@ func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
 // createDownsampledImage creates a representation of the base image that has been scaled down to the size of a JPEG block
 func (q *QuadtreeElement) createDownsampledImage() {
 	baseImage := q.baseImage.(*image.RGBA)
-	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8)
+	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8, drawX.NearestNeighbor)
 	q.downsampledImage = downsampledImage
 }
 
@@ -89,7 +90,8 @@ func (q *QuadtreeElement) compareImages() float64 {
 	downsampledImage := q.downsampledImage.(*image.RGBA)
 	upsampledImage := utils.Scale(downsampledImage,
 		baseBounds.Min.X, baseBounds.Min.Y,
-		baseBounds.Max.X, baseBounds.Max.Y).(*image.RGBA)
+		baseBounds.Max.X, baseBounds.Max.Y,
+		drawX.NearestNeighbor).(*image.RGBA)
 
 	similarity, err := utils.ComparePixels(upsampledImage, baseImage, q.globalBounds)
 	// TODO: Handle errors better

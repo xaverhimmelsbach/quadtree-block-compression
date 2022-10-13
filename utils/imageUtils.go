@@ -31,12 +31,12 @@ func Rectangle(img *image.RGBA, xStart int, xEnd int, yStart int, yEnd int, c co
 }
 
 // Scale scales a given image to the desired dimensions
-func Scale(img *image.RGBA, xStart int, yStart int, xEnd int, yEnd int) image.Image {
+func Scale(img *image.RGBA, xStart int, yStart int, xEnd int, yEnd int, interpolator draw.Interpolator) image.Image {
 	originalBounds := img.Bounds()
 	scaledImage := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
 
 	// TODO: evaluate other algorithms
-	draw.NearestNeighbor.Scale(scaledImage, scaledImage.Bounds(), img, originalBounds, draw.Over, nil)
+	interpolator.Scale(scaledImage, scaledImage.Bounds(), img, originalBounds, draw.Over, nil)
 	return scaledImage
 }
 
