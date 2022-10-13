@@ -30,10 +30,10 @@ func (q *QuadtreeImage) Partition() {
 	// Create root of the quadtree
 	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
-	q.child = &QuadtreeElement{}
+	q.child = NewQuadtreeElement(childImage, q.baseImage.Bounds())
 
 	// Start partitioning the quadtree
-	q.child.partition(childImage, q.baseImage.Bounds())
+	q.child.partition()
 }
 
 // TODO: Implement

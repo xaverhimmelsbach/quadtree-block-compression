@@ -13,15 +13,25 @@ type QuadtreeElement struct {
 	blockImage   image.Image
 	children     []*QuadtreeElement
 	globalBounds image.Rectangle
+	isLeaf       bool
+}
+
+func NewQuadtreeElement(baseImage image.Image, globalBounds image.Rectangle) *QuadtreeElement {
+	qte := new(QuadtreeElement)
+
+	qte.baseImage = baseImage
+	qte.globalBounds = globalBounds
+	// TODO: construct blockImage seperately
+	qte.isLeaf = !qte.furtherPartitioningNecessary()
+
+	return qte
 }
 
 // partition splits the BaseImage into four sub images, if further partitioning is necessary and calls their partition methods
-func (q *QuadtreeElement) partition(baseImage image.Image, globalBounds image.Rectangle) {
-	q.baseImage = baseImage
-	q.globalBounds = globalBounds
+func (q *QuadtreeElement) partition() {
 	q.children = make([]*QuadtreeElement, 0)
 
-	if q.furtherPartitioningNecessary() {
+	if !q.isLeaf {
 		// Partition BaseImage into 4 sub images
 		for i := 0; i < 4; i++ {
 			var xStart int
@@ -52,9 +62,9 @@ func (q *QuadtreeElement) partition(baseImage image.Image, globalBounds image.Re
 			draw.Draw(childImage, childImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
-			child := &QuadtreeElement{}
+			child := NewQuadtreeElement(childImage, q.globalBounds)
 			q.children = append(q.children, child)
-			child.partition(childImage, q.globalBounds)
+			child.partition()
 		}
 	}
 }
