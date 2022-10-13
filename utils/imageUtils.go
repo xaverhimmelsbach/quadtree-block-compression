@@ -8,6 +8,12 @@ import (
 	"golang.org/x/image/draw"
 )
 
+const (
+	weightedRed   float64 = 0.2989
+	weightedGreen float64 = 0.5870
+	weightedBlue  float64 = 0.1140
+)
+
 // HorizontalLine draws a horizontal line onto an image
 func HorizontalLine(img *image.RGBA, xStart int, xEnd int, y int, c color.Color) {
 	for i := xStart; i <= xEnd; i++ {
@@ -81,6 +87,57 @@ func ComparePixelsExact(imageA *image.RGBA, imageB *image.RGBA, globalBounds ima
 
 	// Else compute similarity without OOB pixels
 	similarity := float64(matches) / float64(relevantPixels)
+	return similarity, nil
+}
+
+func ComparePixelsWeighted(imageA *image.RGBA, imageB *image.RGBA, globalBounds image.Rectangle) (float64, error) {
+	// Ensure that images dimensions and origin points are equal
+	if imageA.Bounds().Min.X != imageB.Bounds().Min.X ||
+		imageA.Bounds().Min.Y != imageB.Bounds().Min.Y ||
+		imageA.Bounds().Max.X != imageB.Bounds().Max.X ||
+		imageA.Bounds().Max.Y != imageB.Bounds().Max.Y {
+		return 0, fmt.Errorf("bounds for image A (%v) and image B (%v) do not match", imageA.Bounds(), imageB.Bounds())
+	}
+
+	var matches float64
+	var skipped int
+
+	// Compare every pixel across both images
+	for x := imageA.Bounds().Min.X; x < imageA.Bounds().Max.X; x++ {
+		for y := imageA.Bounds().Min.Y; y < imageA.Bounds().Max.Y; y++ {
+
+			// The padding is of no interest
+			if OutOfBounds(image.Point{X: x, Y: y}, globalBounds) {
+				skipped++
+				continue
+			}
+
+			aR, aG, aB, _ := imageA.At(x, y).RGBA()
+			bR, bG, bB, _ := imageB.At(x, y).RGBA()
+
+			// Use individual color channel weights
+			if InRange(float64(aR), float64(bR), 1000*weightedRed) {
+				matches += weightedRed
+			}
+
+			if InRange(float64(aG), float64(bG), 1000*weightedGreen) {
+				matches += weightedGreen
+			}
+
+			if InRange(float64(aB), float64(bB), 1000*weightedBlue) {
+				matches += weightedBlue
+			}
+		}
+	}
+
+	// If none of the checked pixels were inside bounds signal that no further partitioning is required
+	relevantPixels := imageA.Bounds().Dx()*imageA.Bounds().Dy() - skipped
+	if relevantPixels <= 0 {
+		return 1, nil
+	}
+
+	// Else compute similarity without OOB pixels
+	similarity := matches / float64(relevantPixels)
 	return similarity, nil
 }
 
