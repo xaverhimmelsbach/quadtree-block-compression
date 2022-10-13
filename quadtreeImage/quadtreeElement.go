@@ -9,10 +9,10 @@ import (
 )
 
 type QuadtreeElement struct {
-	baseImage        image.Image
-	downsampledImage image.Image
-	children         []*QuadtreeElement
-	globalBounds     image.Rectangle
+	baseImage    image.Image
+	blockImage   image.Image
+	children     []*QuadtreeElement
+	globalBounds image.Rectangle
 }
 
 // partition splits the BaseImage into four sub images, if further partitioning is necessary and calls their partition methods
@@ -20,8 +20,6 @@ func (q *QuadtreeElement) partition(baseImage image.Image, globalBounds image.Re
 	q.baseImage = baseImage
 	q.globalBounds = globalBounds
 	q.children = make([]*QuadtreeElement, 0)
-
-	q.createDownsampledImage()
 
 	if q.furtherPartitioningNecessary() {
 		// Partition BaseImage into 4 sub images
@@ -76,10 +74,9 @@ func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
 }
 
 // createDownsampledImage creates a representation of the base image that has been scaled down to the size of a JPEG block
-func (q *QuadtreeElement) createDownsampledImage() {
+func (q *QuadtreeElement) createDownsampledImage() image.Image {
 	baseImage := q.baseImage.(*image.RGBA)
-	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8, drawX.NearestNeighbor)
-	q.downsampledImage = downsampledImage
+	return utils.Scale(baseImage, 0, 0, 8, 8, drawX.CatmullRom)
 }
 
 // compareImages compares the scaled down JPEG block with the base image of this element
@@ -87,11 +84,12 @@ func (q *QuadtreeElement) compareImages() float64 {
 	baseImage := q.baseImage.(*image.RGBA)
 	baseBounds := baseImage.Bounds()
 
-	downsampledImage := q.downsampledImage.(*image.RGBA)
+	downsampledImage := q.createDownsampledImage().(*image.RGBA)
 	upsampledImage := utils.Scale(downsampledImage,
 		baseBounds.Min.X, baseBounds.Min.Y,
 		baseBounds.Max.X, baseBounds.Max.Y,
 		drawX.NearestNeighbor).(*image.RGBA)
+	q.blockImage = upsampledImage
 
 	similarity, err := utils.ComparePixelsWeighted(upsampledImage, baseImage, q.globalBounds)
 	// TODO: Handle errors better
