@@ -1,1 +1,8 @@
 # Quadtree Block Compression Config
+Quadtree:
+  # Minimal similarity of base and upsampled image required to be a leaf
+  SimilarityCutoff: 0.9
+  # Interpolation algorithm used to downsample base image
+  DownsamplingInterpolator: NearestNeighbor
+  # Interpolation algorithm used to upsample downsampled image
+  UpsamplingInterpolator: NearestNeighbor

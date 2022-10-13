@@ -1,6 +1,7 @@
 package quadtreeImage
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
 
@@ -8,6 +9,13 @@ import (
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 	drawX "golang.org/x/image/draw"
 )
+
+var interpolators = map[string]drawX.Interpolator{
+	"NearestNeighbor": drawX.NearestNeighbor,
+	"ApproxBilinear":  drawX.ApproxBiLinear,
+	"Bilinear":        drawX.BiLinear,
+	"CatmullRom":      drawX.CatmullRom,
+}
 
 type QuadtreeElement struct {
 	baseImage    image.Image
@@ -80,7 +88,7 @@ func (q *QuadtreeElement) checkIsLeaf() bool {
 	}
 
 	// All blocks with a similarity of less than this need to be split further
-	cutoff := 0.1
+	cutoff := q.config.Quadtree.SimilarityCutoff
 
 	return q.compareImages() > cutoff
 }
@@ -88,12 +96,21 @@ func (q *QuadtreeElement) checkIsLeaf() bool {
 // createBlockImage scales the baseImage down to the size of a JPEG block and then scales it back up to the original size
 func (q *QuadtreeElement) createBlockImage() image.Image {
 	baseImage := q.baseImage.(*image.RGBA)
-	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8, drawX.NearestNeighbor).(*image.RGBA)
 
+	downsamplingInterpolator, err := getInterpolator(q.config.Quadtree.DownsamplingInterpolator)
+	if err != nil {
+		panic(err)
+	}
+	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8, downsamplingInterpolator).(*image.RGBA)
+
+	upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)
+	if err != nil {
+		panic(err)
+	}
 	blockImage := utils.Scale(downsampledImage,
 		q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y,
 		q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y,
-		drawX.NearestNeighbor).(*image.RGBA)
+		upsamplingInterpolator).(*image.RGBA)
 
 	return blockImage
 }
@@ -126,4 +143,13 @@ func (q *QuadtreeElement) visualize() []image.Image {
 	}
 
 	return rects
+}
+
+func getInterpolator(interpolatorId string) (drawX.Interpolator, error) {
+	interpolator, ok := interpolators[interpolatorId]
+	var err error
+	if !ok {
+		err = fmt.Errorf("interpolator id not found: %q", interpolatorId)
+	}
+	return interpolator, err
 }
