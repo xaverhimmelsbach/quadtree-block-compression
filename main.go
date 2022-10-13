@@ -21,16 +21,16 @@ func main() {
 	}
 
 	// Create quadtree image representation
-	quadtreeImage := quadtreeImage.QuadtreeImage{}
+	quadtreeRoot := quadtreeImage.QuadtreeImage{}
 
 	// Partition image into a quadtree structure
-	quadtreeImage.Partition(img)
+	quadtreeRoot.Partition(img)
 
 	// Encode quadtree structure
-	quadtreeImage.Encode()
+	quadtreeRoot.Encode()
 
 	// Visualize quadtree structure
-	baseVisualization, paddedVisualization, baseBlockVisualization, paddedBlockVisualization, err := quadtreeImage.Visualize(*outputPath)
+	baseVisualization, paddedVisualization, baseBlockVisualization, paddedBlockVisualization, err := quadtreeRoot.Visualize(*outputPath)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +40,7 @@ func main() {
 	utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
 
 	// Write quadtree structure to output
-	quadtreeImage.WriteFile(*outputPath)
+	quadtreeRoot.WriteFile(*outputPath)
 
 	fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
 }
