@@ -40,9 +40,9 @@ func Scale(img *image.RGBA, xStart int, yStart int, xEnd int, yEnd int, interpol
 	return scaledImage
 }
 
-// ComparePixels naively compares two images by checking how many of the pixels between the two images are identical
+// ComparePixelsExact naively compares two images by checking how many of the pixels between them are identical.
 // It returns a float that ranges between 0 (no matches) and 1 (identical pictures)
-func ComparePixels(imageA *image.RGBA, imageB *image.RGBA, globalBounds image.Rectangle) (float64, error) {
+func ComparePixelsExact(imageA *image.RGBA, imageB *image.RGBA, globalBounds image.Rectangle) (float64, error) {
 	// Ensure that images dimensions and origin points are equal
 	if imageA.Bounds().Min.X != imageB.Bounds().Min.X ||
 		imageA.Bounds().Min.Y != imageB.Bounds().Min.Y ||
@@ -73,7 +73,7 @@ func ComparePixels(imageA *image.RGBA, imageB *image.RGBA, globalBounds image.Re
 		}
 	}
 
-	// If none of the checked pixels were inside bounds signal that no further partitioning is required
+	// If none of the checked pixels were inside bounds, signal that no further partitioning is required
 	relevantPixels := imageA.Bounds().Dx()*imageA.Bounds().Dy() - skipped
 	if relevantPixels <= 0 {
 		return 1, nil

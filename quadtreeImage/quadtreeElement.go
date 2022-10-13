@@ -93,7 +93,7 @@ func (q *QuadtreeElement) compareImages() float64 {
 		baseBounds.Max.X, baseBounds.Max.Y,
 		drawX.NearestNeighbor).(*image.RGBA)
 
-	similarity, err := utils.ComparePixels(upsampledImage, baseImage, q.globalBounds)
+	similarity, err := utils.ComparePixelsExact(upsampledImage, baseImage, q.globalBounds)
 	// TODO: Handle errors better
 	if err != nil {
 		panic(err)
