@@ -15,16 +15,24 @@ type QuadtreeImage struct {
 	child       *QuadtreeElement
 }
 
+// NewQuadtreeImage constructs a well-formed instance of QuadtreeImage from a baseImage
+func NewQuadtreeImage(baseImage image.Image) *QuadtreeImage {
+	qti := new(QuadtreeImage)
+
+	qti.baseImage = baseImage
+	qti.paddedImage = qti.pad()
+
+	return qti
+}
+
 // Partition splits the BaseImage into an appropriate number of sub images and calls their partition method
-func (q *QuadtreeImage) Partition(baseImage image.Image) {
-	q.baseImage = baseImage
-
-	q.pad()
-
+func (q *QuadtreeImage) Partition() {
+	// Create root of the quadtree
 	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
-
 	q.child = &QuadtreeElement{}
+
+	// Start partitioning the quadtree
 	q.child.partition(childImage, q.baseImage.Bounds())
 }
 
@@ -75,7 +83,7 @@ func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, image.
 }
 
 // pad adds transparent padding to a copy of BaseImage to make it a square with an edge length that can be divided by a multiple of four to get a JPEG block
-func (q *QuadtreeImage) pad() {
+func (q *QuadtreeImage) pad() image.Image {
 	baseBounds := q.baseImage.Bounds()
 	var longerSideLength int
 	paddedSideLength := 8
@@ -96,5 +104,5 @@ func (q *QuadtreeImage) pad() {
 	paddedImage := image.NewRGBA(image.Rect(0, 0, paddedSideLength, paddedSideLength))
 	draw.Draw(paddedImage, paddedImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
-	q.paddedImage = paddedImage
+	return paddedImage
 }
