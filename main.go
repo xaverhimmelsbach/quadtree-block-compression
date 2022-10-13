@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/quadtreeImage"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 )
@@ -12,7 +13,15 @@ func main() {
 	// Parse arguments
 	inputPath := flag.String("input", "", "Image to encode as quadtree")
 	outputPath := flag.String("output", "", "Path to write encoded file to")
+	configPath := flag.String("config", "config.yml", "Path to read program config from")
 	flag.Parse()
+
+	// Load config
+	cfg, err := config.NewConfigFromFile(*configPath)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(cfg)
 
 	// Read image from file system
 	img, err := utils.ReadImage(*inputPath)
