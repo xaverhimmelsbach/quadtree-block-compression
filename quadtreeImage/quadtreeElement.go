@@ -22,7 +22,7 @@ func NewQuadtreeElement(baseImage image.Image, globalBounds image.Rectangle) *Qu
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
 	qte.blockImage = qte.createBlockImage()
-	qte.isLeaf = !qte.furtherPartitioningNecessary()
+	qte.isLeaf = qte.checkIsLeaf()
 
 	return qte
 }
@@ -69,18 +69,17 @@ func (q *QuadtreeElement) partition() {
 	}
 }
 
-// furtherPartitioningNecessary decides whether the current element needs to be split into four smaller ones.
-// The decision is made upon the similarity of the JPEG block to the original base image
-func (q *QuadtreeElement) furtherPartitioningNecessary() bool {
+// checkIsLeaf checks whether the current block needs to be partitioned further
+func (q *QuadtreeElement) checkIsLeaf() bool {
 	// If the size of a JPEG block was reached, don't partition further
 	if q.baseImage.Bounds().Dx() <= 8 || q.baseImage.Bounds().Dy() <= 8 {
-		return false
+		return true
 	}
 
 	// All blocks with a similarity of less than this need to be split further
 	cutoff := 0.1
 
-	return q.compareImages() < cutoff
+	return q.compareImages() > cutoff
 }
 
 // createBlockImage scales the baseImage down to the size of a JPEG block and then scales it back up to the original size
