@@ -54,8 +54,6 @@ func main() {
 		utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
 	}
 
-	// Write quadtree structure to output
-	quadtreeRoot.WriteFile(*outputPath)
-
+	// TODO: Write quadtree structure to output
 	fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
 }

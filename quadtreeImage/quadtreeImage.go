@@ -44,11 +44,6 @@ func (q *QuadtreeImage) Encode() {
 	fmt.Println("Encoding QuadtreeImage")
 }
 
-// TODO: Implement
-func (q *QuadtreeImage) WriteFile(path string) {
-	fmt.Printf("Writing QuadtreeImage to %q\n", path)
-}
-
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.
 // It also draws them onto the upsampled JPEG blocks to show how the encoded result would look
 func (q *QuadtreeImage) Visualize(path string, drawGrid bool) (image.Image, image.Image, image.Image, image.Image, error) {
