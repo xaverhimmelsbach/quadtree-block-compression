@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"strconv"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
@@ -24,11 +25,13 @@ type QuadtreeElement struct {
 	globalBounds image.Rectangle
 	isLeaf       bool
 	config       *config.Config
+	id           string
 }
 
-func NewQuadtreeElement(baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
+func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
 
+	qte.id = id
 	qte.config = cfg
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
@@ -73,7 +76,7 @@ func (q *QuadtreeElement) partition() {
 			draw.Draw(childImage, childImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
-			child := NewQuadtreeElement(childImage, q.globalBounds, q.config)
+			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.config)
 			q.children = append(q.children, child)
 			child.partition()
 		}
