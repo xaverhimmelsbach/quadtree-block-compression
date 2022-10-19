@@ -115,3 +115,7 @@ func OutOfBounds(point image.Point, bounds image.Rectangle) bool {
 		y < rectYStart ||
 		y > rectYEnd
 }
+
+func CardinalLineOutOfBounds(start image.Point, end image.Point, bounds image.Rectangle) bool {
+	return OutOfBounds(start, bounds) && OutOfBounds(end, bounds)
+}
