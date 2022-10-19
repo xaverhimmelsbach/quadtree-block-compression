@@ -101,15 +101,14 @@ func (q *QuadtreeElement) createBlockImage() image.Image {
 	if err != nil {
 		panic(err)
 	}
-	downsampledImage := utils.Scale(baseImage, 0, 0, 8, 8, downsamplingInterpolator).(*image.RGBA)
+	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, 8, 8), downsamplingInterpolator).(*image.RGBA)
 
 	upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)
 	if err != nil {
 		panic(err)
 	}
 	blockImage := utils.Scale(downsampledImage,
-		q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y,
-		q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y,
+		image.Rect(q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y, q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y),
 		upsamplingInterpolator).(*image.RGBA)
 
 	return blockImage

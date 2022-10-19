@@ -24,9 +24,9 @@ func scaleTest(img image.Image) {
 
 	for name, interpolator := range interpolators {
 		for name2, interpolator2 := range interpolators {
-			imgDownscaled := utils.Scale(imgRGBA, 0, 0, 8, 8, interpolator)
+			imgDownscaled := utils.Scale(imgRGBA, image.Rect(0, 0, 8, 8), interpolator)
 
-			imgUpscaled := utils.Scale(imgDownscaled.(*image.RGBA), img.Bounds().Min.X, img.Bounds().Min.Y, img.Bounds().Max.X, img.Bounds().Max.Y, interpolator2)
+			imgUpscaled := utils.Scale(imgDownscaled.(*image.RGBA), img.Bounds(), interpolator2)
 			imgUpscaledRGBA := imgUpscaled.(*image.RGBA)
 
 			// utils.WriteImage("downscaled.png", imgDownscaled)
