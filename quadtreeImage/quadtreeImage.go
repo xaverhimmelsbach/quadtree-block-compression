@@ -69,8 +69,8 @@ func (q *QuadtreeImage) Visualize(path string, drawGrid bool) (image.Image, imag
 		}
 
 		// Combine separate upscaled blocks into whole images
-		draw.Draw(baseImageBlocks, baseImageBlocks.Bounds(), img, img.Bounds().Min, draw.Src)
-		draw.Draw(paddedImageBlocks, paddedImageBlocks.Bounds(), img, img.Bounds().Min, draw.Src)
+		draw.Draw(baseImageBlocks, img.Bounds(), img, img.Bounds().Min, draw.Src)
+		draw.Draw(paddedImageBlocks, img.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
 
 	// Additional loop to draw bounding boxes on top of the block images
