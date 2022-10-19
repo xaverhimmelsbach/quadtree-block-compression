@@ -74,7 +74,7 @@ func (q *QuadtreeElement) partition() {
 
 			// Copy BaseImage section to sub image
 			childImage := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
-			draw.Draw(childImage, childImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
+			draw.Draw(childImage, childImage.Bounds(), q.baseImage, childImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
 			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.config)
