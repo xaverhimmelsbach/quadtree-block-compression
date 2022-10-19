@@ -15,9 +15,17 @@ type QuadtreeConfig struct {
 	UpsamplingInterpolator string `yaml:"UpsamplingInterpolator"`
 }
 
+type VisualizationConfig struct {
+	// Should the visualizations be created?
+	Enable bool `yaml:"Enable"`
+	// Should the quadtree grid be drawn onto the visualization?
+	DrawGrid bool `yaml:"DrawGrid"`
+}
+
 // Config holds parameters that influence the partitioning and encoding process of the quadtree
 type Config struct {
-	Quadtree QuadtreeConfig `yaml:"Quadtree"`
+	Quadtree            QuadtreeConfig      `yaml:"Quadtree"`
+	VisualizationConfig VisualizationConfig `yaml:"Visualization"`
 }
 
 // NewConfigFromFile constructs a Config object from a YAML file
