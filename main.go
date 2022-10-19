@@ -39,14 +39,20 @@ func main() {
 	quadtreeRoot.Encode()
 
 	// Visualize quadtree structure
-	baseVisualization, paddedVisualization, baseBlockVisualization, paddedBlockVisualization, err := quadtreeRoot.Visualize(*outputPath)
-	if err != nil {
-		panic(err)
+	if cfg.VisualizationConfig.Enable {
+		baseVisualization,
+			paddedVisualization,
+			baseBlockVisualization,
+			paddedBlockVisualization,
+			err := quadtreeRoot.Visualize(*outputPath, cfg.VisualizationConfig.DrawGrid)
+		if err != nil {
+			panic(err)
+		}
+		utils.WriteImage("visualizationBase.png", baseVisualization)
+		utils.WriteImage("visualizationPadded.png", paddedVisualization)
+		utils.WriteImage("visualizationBlockBase.png", baseBlockVisualization)
+		utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
 	}
-	utils.WriteImage("visualizationBase.png", baseVisualization)
-	utils.WriteImage("visualizationPadded.png", paddedVisualization)
-	utils.WriteImage("visualizationBlockBase.png", baseBlockVisualization)
-	utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
 
 	// Write quadtree structure to output
 	quadtreeRoot.WriteFile(*outputPath)

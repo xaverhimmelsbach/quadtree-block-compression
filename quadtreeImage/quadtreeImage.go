@@ -51,7 +51,7 @@ func (q *QuadtreeImage) WriteFile(path string) {
 
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.
 // It also draws them onto the upsampled JPEG blocks to show how the encoded result would look
-func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, image.Image, image.Image, error) {
+func (q *QuadtreeImage) Visualize(path string, drawGrid bool) (image.Image, image.Image, image.Image, image.Image, error) {
 	images := q.child.visualize()
 	baseBounds := q.baseImage.Bounds()
 	paddedBounds := q.paddedImage.Bounds()
@@ -68,8 +68,10 @@ func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, image.
 
 	for _, img := range images {
 		// Draw bounding boxes
-		utils.Rectangle(baseImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-		utils.Rectangle(paddedImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+		if drawGrid {
+			utils.Rectangle(baseImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+			utils.Rectangle(paddedImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+		}
 
 		// Combine separate upscaled blocks into whole images
 		draw.Draw(baseImageBlocks, baseImageBlocks.Bounds(), img, img.Bounds().Min, draw.Src)
@@ -77,9 +79,11 @@ func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, image.
 	}
 
 	// Additional loop to draw bounding boxes on top of the block images
-	for _, img := range images {
-		utils.Rectangle(baseImageBlocks, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-		utils.Rectangle(paddedImageBlocks, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+	if drawGrid {
+		for _, img := range images {
+			utils.Rectangle(baseImageBlocks, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+			utils.Rectangle(paddedImageBlocks, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+		}
 	}
 
 	return baseImage, paddedImage, baseImageBlocks, paddedImageBlocks, nil
