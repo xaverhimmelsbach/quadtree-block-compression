@@ -107,5 +107,7 @@ func (q *QuadtreeImage) pad() image.Image {
 	paddedImage := image.NewRGBA(image.Rect(0, 0, paddedSideLength, paddedSideLength))
 	draw.Draw(paddedImage, paddedImage.Bounds(), q.baseImage, q.baseImage.Bounds().Min, draw.Src)
 
+	utils.FillSpace(paddedImage, q.baseImage.Bounds())
+
 	return paddedImage
 }
