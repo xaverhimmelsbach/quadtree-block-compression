@@ -6,3 +6,10 @@ Quadtree:
   DownsamplingInterpolator: NearestNeighbor
   # Interpolation algorithm used to upsample downsampled image
   UpsamplingInterpolator: NearestNeighbor
+
+# Visualization Config
+Visualization:
+  # Should the visualizations be created?
+  Enable: True
+  # Should the quadtree grid be drawn onto the visualization?
+  DrawGrid: True
