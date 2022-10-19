@@ -19,13 +19,14 @@ var interpolators = map[string]drawX.Interpolator{
 }
 
 type QuadtreeElement struct {
-	baseImage    image.Image
-	blockImage   image.Image
-	children     []*QuadtreeElement
-	globalBounds image.Rectangle
-	isLeaf       bool
-	config       *config.Config
-	id           string
+	baseImage      image.Image
+	blockImage     image.Image
+	blockImageJPEG image.Image
+	children       []*QuadtreeElement
+	globalBounds   image.Rectangle
+	isLeaf         bool
+	config         *config.Config
+	id             string
 }
 
 func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
@@ -35,7 +36,7 @@ func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rec
 	qte.config = cfg
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
-	qte.blockImage = qte.createBlockImage()
+	qte.blockImage, qte.blockImageJPEG = qte.createBlockImage()
 	qte.isLeaf = qte.checkIsLeaf()
 
 	return qte
@@ -97,24 +98,25 @@ func (q *QuadtreeElement) checkIsLeaf() bool {
 }
 
 // createBlockImage scales the baseImage down to the size of a JPEG block and then scales it back up to the original size
-func (q *QuadtreeElement) createBlockImage() image.Image {
+func (q *QuadtreeElement) createBlockImage() (image.Image, image.Image) {
 	baseImage := q.baseImage.(*image.RGBA)
 
 	downsamplingInterpolator, err := getInterpolator(q.config.Quadtree.DownsamplingInterpolator)
 	if err != nil {
 		panic(err)
 	}
-	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, 8, 8), downsamplingInterpolator).(*image.RGBA)
+	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, 8, 8), downsamplingInterpolator)
+	downsampledImageRGBA := downsampledImage.(*image.RGBA)
 
 	upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)
 	if err != nil {
 		panic(err)
 	}
-	blockImage := utils.Scale(downsampledImage,
+	blockImage := utils.Scale(downsampledImageRGBA,
 		image.Rect(q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y, q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y),
 		upsamplingInterpolator).(*image.RGBA)
 
-	return blockImage
+	return blockImage, downsampledImage
 }
 
 // compareImages compares the scaled down JPEG block with the base image of this element
