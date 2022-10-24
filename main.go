@@ -36,7 +36,7 @@ func main() {
 	quadtreeRoot.Partition()
 
 	// Encode quadtree structure
-	quadtreeRoot.Encode()
+	quadtreeRoot.Encode(*outputPath)
 
 	// Visualize quadtree structure
 	if cfg.VisualizationConfig.Enable {

@@ -1,10 +1,13 @@
 package quadtreeImage
 
 import (
+	"archive/zip"
 	"fmt"
 	"image"
 	"image/draw"
+	"image/jpeg"
 	"strconv"
+	"strings"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
@@ -131,6 +134,30 @@ func (q *QuadtreeElement) compareImages() float64 {
 	}
 
 	return similarity
+}
+
+// encode writes the quadtree structure to a zip file
+func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
+	// Create directory path in zip file
+	// TODO: can this be optimized?
+	path := strings.Join(strings.Split(q.id, ""), "/")
+
+	if q.isLeaf {
+		// Either create and encode an image file if this is a quadtree leaf
+		fileWriter, err := zipWriter.Create(path)
+		if err != nil {
+			return err
+		}
+
+		err = jpeg.Encode(fileWriter, q.blockImageJPEG, nil)
+	} else {
+		// Or recurse into children
+		for _, child := range q.children {
+			child.encode(zipWriter)
+		}
+	}
+
+	return err
 }
 
 // visualize returns its own bounding box if it has no children, else it returns its childrens bounding boxes

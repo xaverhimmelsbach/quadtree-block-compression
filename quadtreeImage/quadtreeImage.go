@@ -1,10 +1,11 @@
 package quadtreeImage
 
 import (
-	"fmt"
+	"archive/zip"
 	"image"
 	"image/color"
 	"image/draw"
+	"os"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
@@ -39,9 +40,21 @@ func (q *QuadtreeImage) Partition() {
 	q.child.partition()
 }
 
-// TODO: Implement
-func (q *QuadtreeImage) Encode() {
-	fmt.Println("Encoding QuadtreeImage")
+// Encode encodes a quadtree image into single file and writes it to the file system
+func (q *QuadtreeImage) Encode(filePath string) error {
+	targetFile, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+
+	zipWriter := zip.NewWriter(targetFile)
+	err = q.child.encode(zipWriter)
+	if err != nil {
+		return err
+	}
+
+	err = zipWriter.Close()
+	return err
 }
 
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.
