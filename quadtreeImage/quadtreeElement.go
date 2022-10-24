@@ -140,10 +140,9 @@ func (q *QuadtreeElement) visualize() []image.Image {
 	if len(q.children) == 0 {
 		rects = append(rects, q.blockImage)
 	} else {
-		rects = append(rects, q.children[0].visualize()...)
-		rects = append(rects, q.children[1].visualize()...)
-		rects = append(rects, q.children[2].visualize()...)
-		rects = append(rects, q.children[3].visualize()...)
+		for _, child := range q.children {
+			rects = append(rects, child.visualize()...)
+		}
 	}
 
 	return rects
