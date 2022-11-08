@@ -50,12 +50,13 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 	}
 
 	zipWriter := zip.NewWriter(targetFile)
+	defer zipWriter.Close()
+
 	err = q.child.encode(zipWriter)
 	if err != nil {
 		return err
 	}
 
-	err = zipWriter.Close()
 	return err
 }
 
