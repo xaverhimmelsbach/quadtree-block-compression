@@ -74,8 +74,8 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 }
 
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.
-// It also draws them onto the upsampled JPEG blocks to show how the encoded result would look
-func (q *QuadtreeImage) Visualize(path string, drawGrid bool) (image.Image, image.Image, image.Image, image.Image, error) {
+// It also draws the upsampled JPEG blocks to show how the encoded result would look
+func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, image.Image, image.Image, error) {
 	images := q.child.visualize()
 	baseBounds := q.baseImage.Bounds()
 	paddedBounds := q.paddedImage.Bounds()
@@ -92,22 +92,12 @@ func (q *QuadtreeImage) Visualize(path string, drawGrid bool) (image.Image, imag
 
 	for _, img := range images {
 		// Draw bounding boxes
-		if drawGrid {
-			utils.Rectangle(baseImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-			utils.Rectangle(paddedImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-		}
+		utils.Rectangle(baseImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+		utils.Rectangle(paddedImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
 
 		// Combine separate upscaled blocks into whole images
 		draw.Draw(baseImageBlocks, img.Bounds(), img, img.Bounds().Min, draw.Src)
 		draw.Draw(paddedImageBlocks, img.Bounds(), img, img.Bounds().Min, draw.Src)
-	}
-
-	// Additional loop to draw bounding boxes on top of the block images
-	if drawGrid {
-		for _, img := range images {
-			utils.Rectangle(baseImageBlocks, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-			utils.Rectangle(paddedImageBlocks, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-		}
 	}
 
 	return baseImage, paddedImage, baseImageBlocks, paddedImageBlocks, nil

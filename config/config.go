@@ -18,8 +18,6 @@ type QuadtreeConfig struct {
 type VisualizationConfig struct {
 	// Should the visualizations be created?
 	Enable bool `yaml:"Enable"`
-	// Should the quadtree grid be drawn onto the visualization?
-	DrawGrid bool `yaml:"DrawGrid"`
 }
 
 // Config holds parameters that influence the partitioning and encoding process of the quadtree

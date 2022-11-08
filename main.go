@@ -56,7 +56,7 @@ func main() {
 				paddedVisualization,
 				baseBlockVisualization,
 				paddedBlockVisualization,
-				err := quadtreeRoot.Visualize(*outputPath, cfg.VisualizationConfig.DrawGrid)
+				err := quadtreeRoot.Visualize(*outputPath)
 			if err != nil {
 				panic(err)
 			}
