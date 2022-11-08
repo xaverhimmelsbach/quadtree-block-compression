@@ -58,17 +58,22 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 		return err
 	}
 
-	fileWriter, err := zipWriter.Create(HeightPath)
+	fileWriter, err := zipWriter.Create(MetaFile)
 	if err != nil {
 		return err
 	}
 
-	height, err := q.getHeight()
+	treeHeight, err := q.getHeight()
 	if err != nil {
 		return err
 	}
 
-	fileWriter.Write([]byte(strconv.Itoa(height)))
+	width := q.baseImage.Bounds().Dx()
+	height := q.baseImage.Bounds().Dy()
+
+	fileWriter.Write([]byte(strconv.Itoa(treeHeight) + "\n" +
+		strconv.Itoa(width) + "\n" +
+		strconv.Itoa(height)))
 
 	return err
 }
