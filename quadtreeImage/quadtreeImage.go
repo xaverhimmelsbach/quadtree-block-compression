@@ -2,9 +2,11 @@ package quadtreeImage
 
 import (
 	"archive/zip"
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 	"os"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
@@ -122,4 +124,20 @@ func (q *QuadtreeImage) pad() image.Image {
 	utils.FillSpace(paddedImage, q.baseImage.Bounds())
 
 	return paddedImage
+}
+
+// getHeight returns how high the quadtree would need to be, to have children of size BlockSize as leaves
+func (q *QuadtreeImage) getHeight() (int, error) {
+	// Make sure that paddedImage is quadratic
+	dx := q.paddedImage.Bounds().Dx()
+	dy := q.paddedImage.Bounds().Dy()
+
+	if dx != dy {
+		return 0, fmt.Errorf("padded image is not quadratic (width: %d, height: %d)", dx, dy)
+	}
+
+	// How many blocks would the tree be made up of in the worst case?
+	blockCount := float64(dx) / float64(BlockSize)
+	// How often the tree would need to partition to get to blocks of size BlockSize?
+	return int(math.Log2(blockCount)), nil
 }
