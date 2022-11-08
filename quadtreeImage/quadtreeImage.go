@@ -80,7 +80,7 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.
 // It also draws the upsampled JPEG blocks to show how the encoded result would look
-func (q *QuadtreeImage) Visualize(path string) (image.Image, image.Image, image.Image, image.Image, error) {
+func (q *QuadtreeImage) Visualize() (image.Image, image.Image, image.Image, image.Image, error) {
 	images := q.child.visualize()
 	baseBounds := q.baseImage.Bounds()
 	paddedBounds := q.paddedImage.Bounds()
