@@ -8,6 +8,7 @@ import (
 	"image/draw"
 	"math"
 	"os"
+	"strconv"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
@@ -56,6 +57,18 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 	if err != nil {
 		return err
 	}
+
+	fileWriter, err := zipWriter.Create("height")
+	if err != nil {
+		return err
+	}
+
+	height, err := q.getHeight()
+	if err != nil {
+		return err
+	}
+
+	fileWriter.Write([]byte(strconv.Itoa(height)))
 
 	return err
 }
