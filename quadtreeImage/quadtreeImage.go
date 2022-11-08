@@ -58,7 +58,7 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 		return err
 	}
 
-	fileWriter, err := zipWriter.Create("height")
+	fileWriter, err := zipWriter.Create(HeightPath)
 	if err != nil {
 		return err
 	}
