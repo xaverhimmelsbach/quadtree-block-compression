@@ -55,6 +55,7 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 	zipWriter := zip.NewWriter(targetFile)
 	defer zipWriter.Close()
 
+	// TODO: What happens if the first child can already encode the whole picture (e.g. solid color)?
 	err = q.child.encode(zipWriter)
 	if err != nil {
 		return err
