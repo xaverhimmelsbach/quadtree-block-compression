@@ -150,6 +150,9 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 		}
 
 		err = jpeg.Encode(fileWriter, q.blockImageJPEG, nil)
+		if err != nil {
+			return err
+		}
 	} else {
 		// Or recurse into children
 		for _, child := range q.children {
@@ -157,7 +160,7 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 		}
 	}
 
-	return err
+	return nil
 }
 
 // visualize returns its own bounding box if it has no children, else it returns its childrens bounding boxes
