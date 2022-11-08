@@ -6,9 +6,11 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
@@ -76,6 +78,89 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 		strconv.Itoa(height)))
 
 	return err
+}
+
+// Decode decodes an encoded quadtree image and populates a quadtree with it
+func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*QuadtreeImage, error) {
+	zipReader, err := zip.OpenReader(quadtreePath)
+	if err != nil {
+		return nil, err
+	}
+
+	metaFile, err := zipReader.Open(MetaFile)
+	if err != nil {
+		return nil, err
+	}
+
+	metaBytes, err := ioutil.ReadAll(metaFile)
+	if err != nil {
+		return nil, err
+	}
+
+	meta := strings.Split(string(metaBytes), "\n")
+	if len(meta) != 3 {
+		return nil, fmt.Errorf("meta file contained %d newline-seperated values instead of three", len(meta))
+	}
+
+	treeHeight, err := strconv.Atoi(meta[0])
+	if err != nil {
+		return nil, err
+	}
+
+	width, err := strconv.Atoi(meta[1])
+	if err != nil {
+		return nil, err
+	}
+
+	height, err := strconv.Atoi(meta[2])
+	if err != nil {
+		return nil, err
+	}
+
+	baseImage := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// Construct QuadtreeImage manually to avoid creating a paddedImage
+	qti := &QuadtreeImage{
+		baseImage: baseImage,
+		config:    cfg,
+	}
+
+	qti.paddedImage = qti.pad()
+
+	qti.child = &QuadtreeElement{
+		id:        "",
+		config:    cfg,
+		baseImage: qti.paddedImage,
+	}
+
+	for _, file := range zipReader.File {
+		// Skip height file
+		if file.Name == MetaFile {
+			continue
+		}
+
+		err = qti.child.decode(file.Name, file, treeHeight)
+		if err != nil {
+			return qti, err
+		}
+	}
+
+	return qti, nil
+}
+
+// GetDecodedImage returns the decoded image data from a populated quadtree
+// TODO: Duplicated code fragment
+func (q *QuadtreeImage) GetDecodedImage() image.Image {
+	images := q.child.visualize()
+	baseBounds := q.baseImage.Bounds()
+
+	decodedImage := image.NewRGBA(image.Rect(0, 0, baseBounds.Dx(), baseBounds.Dy()))
+
+	for _, img := range images {
+		draw.Draw(decodedImage, img.Bounds(), img, img.Bounds().Min, draw.Src)
+	}
+
+	return decodedImage
 }
 
 // Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.

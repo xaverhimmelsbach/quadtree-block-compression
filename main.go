@@ -70,6 +70,13 @@ func main() {
 		fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding fractal file")
+		quadtreeRoot, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
+		if err != nil {
+			panic(err)
+		}
+
+		decodedImage := quadtreeRoot.GetDecodedImage()
+		utils.WriteImage(*outputPath, decodedImage)
 	default:
 		panic("filetype is neither image nor archive")
 	}

@@ -163,6 +163,96 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 	return nil
 }
 
+func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int) error {
+	if path == "" {
+		// scale up file if needed and use as blockImage
+		fmt.Printf("Finished decoding at height %d\n", remainingHeight)
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		fileImage, err := utils.ReadImageFromReader(fileReader)
+		if err != nil {
+			return err
+		}
+		fileImageRGBA := image.NewRGBA(fileImage.Bounds())
+		draw.Draw(fileImageRGBA, fileImageRGBA.Bounds(), fileImage, fileImage.Bounds().Min, draw.Src)
+
+		// Duplicate code fragment
+		upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)
+		if err != nil {
+			panic(err)
+		}
+		blockImage := utils.Scale(fileImageRGBA,
+			image.Rect(q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y, q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y),
+			upsamplingInterpolator).(*image.RGBA)
+
+		q.blockImage = blockImage
+
+		return nil
+	}
+
+	if remainingHeight == 0 {
+		return fmt.Errorf("further partition according to path %s would lead to remaining height being smaller than 0 in %s", path, q.id)
+	}
+
+	if len(q.children) != ChildCount {
+		// TODO: More or less duplicate code fragment
+		for i := 0; i < ChildCount; i++ {
+			var xStart int
+			var yStart int
+			var xEnd int
+			var yEnd int
+
+			// Set x coordinates
+			if i&1 == 0 {
+				xStart = q.baseImage.Bounds().Min.X
+				xEnd = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
+			} else {
+				xStart = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
+				xEnd = q.baseImage.Bounds().Max.X
+			}
+
+			// Set y coordinates
+			if i&2 == 0 {
+				yStart = q.baseImage.Bounds().Min.Y
+				yEnd = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
+			} else {
+				yStart = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
+				yEnd = q.baseImage.Bounds().Max.Y
+			}
+
+			// Copy BaseImage section to sub image
+			childImage := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
+
+			// Create and partition child
+			// NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.config)
+			child := &QuadtreeElement{
+				id:        q.id + strconv.Itoa(i),
+				baseImage: childImage,
+				config:    q.config,
+			}
+			q.children = append(q.children, child)
+		}
+	}
+
+	splitPath := strings.Split(path, "/")
+	childId, err := strconv.Atoi(splitPath[0])
+	if err != nil {
+		return err
+	}
+
+	if childId >= ChildCount {
+		return fmt.Errorf("childId %d is greater than child count (%d)", childId, ChildCount)
+	}
+
+	recursePath := strings.Join(splitPath[1:], "/")
+
+	return q.children[childId].decode(recursePath, file, remainingHeight-1)
+}
+
 // visualize returns its own bounding box if it has no children, else it returns its childrens bounding boxes
 func (q *QuadtreeElement) visualize() []image.Image {
 	rects := make([]image.Image, 0)
