@@ -50,8 +50,8 @@ func (q *QuadtreeElement) partition() {
 	q.children = make([]*QuadtreeElement, 0)
 
 	if !q.isLeaf {
-		// Partition BaseImage into 4 sub images
-		for i := 0; i < 4; i++ {
+		// Partition BaseImage into sub images
+		for i := 0; i < ChildCount; i++ {
 			var xStart int
 			var yStart int
 			var xEnd int
@@ -90,7 +90,7 @@ func (q *QuadtreeElement) partition() {
 // checkIsLeaf checks whether the current block needs to be partitioned further
 func (q *QuadtreeElement) checkIsLeaf() bool {
 	// If the size of a JPEG block was reached, don't partition further
-	if q.baseImage.Bounds().Dx() <= 8 || q.baseImage.Bounds().Dy() <= 8 {
+	if q.baseImage.Bounds().Dx() <= BlockSize || q.baseImage.Bounds().Dy() <= BlockSize {
 		return true
 	}
 
@@ -108,7 +108,7 @@ func (q *QuadtreeElement) createBlockImage() (image.Image, image.Image) {
 	if err != nil {
 		panic(err)
 	}
-	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, 8, 8), downsamplingInterpolator)
+	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, BlockSize, BlockSize), downsamplingInterpolator)
 	downsampledImageRGBA := downsampledImage.(*image.RGBA)
 
 	upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)

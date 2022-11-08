@@ -101,7 +101,7 @@ func (q *QuadtreeImage) Visualize(path string, drawGrid bool) (image.Image, imag
 func (q *QuadtreeImage) pad() image.Image {
 	baseBounds := q.baseImage.Bounds()
 	var longerSideLength int
-	paddedSideLength := 8
+	paddedSideLength := BlockSize
 
 	// Find the longer side of X and Y
 	if baseBounds.Dx() > baseBounds.Dy() {
@@ -112,7 +112,7 @@ func (q *QuadtreeImage) pad() image.Image {
 
 	// Pad until the padding is greater than both sides of the BaseImage
 	for paddedSideLength < longerSideLength {
-		paddedSideLength *= 4
+		paddedSideLength *= ChildCount
 	}
 
 	// Copy BaseImage over padded image
