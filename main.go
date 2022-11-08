@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 
+	"github.com/h2non/filetype"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/quadtreeImage"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
@@ -23,37 +25,52 @@ func main() {
 	}
 	fmt.Println(cfg)
 
-	// Read image from file system
-	img, err := utils.ReadImage(*inputPath)
+	// TODO: Reuse buffer for image reading
+	inputBuffer, err := ioutil.ReadFile(*inputPath)
 	if err != nil {
 		panic(err)
 	}
 
-	// Create quadtree image representation
-	quadtreeRoot := quadtreeImage.NewQuadtreeImage(img, cfg)
+	switch true {
+	case filetype.IsImage(inputBuffer):
+		fmt.Println("Encoding image file")
 
-	// Partition image into a quadtree structure
-	quadtreeRoot.Partition()
-
-	// Encode quadtree structure
-	quadtreeRoot.Encode(*outputPath)
-
-	// Visualize quadtree structure
-	if cfg.VisualizationConfig.Enable {
-		baseVisualization,
-			paddedVisualization,
-			baseBlockVisualization,
-			paddedBlockVisualization,
-			err := quadtreeRoot.Visualize(*outputPath, cfg.VisualizationConfig.DrawGrid)
+		// Read image from file system
+		img, err := utils.ReadImage(*inputPath)
 		if err != nil {
 			panic(err)
 		}
-		utils.WriteImage("visualizationBase.png", baseVisualization)
-		utils.WriteImage("visualizationPadded.png", paddedVisualization)
-		utils.WriteImage("visualizationBlockBase.png", baseBlockVisualization)
-		utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
-	}
 
-	// TODO: Write quadtree structure to output
-	fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
+		// Create quadtree image representation
+		quadtreeRoot := quadtreeImage.NewQuadtreeImage(img, cfg)
+
+		// Partition image into a quadtree structure
+		quadtreeRoot.Partition()
+
+		// Encode quadtree structure
+		quadtreeRoot.Encode(*outputPath)
+
+		// Visualize quadtree structure
+		if cfg.VisualizationConfig.Enable {
+			baseVisualization,
+				paddedVisualization,
+				baseBlockVisualization,
+				paddedBlockVisualization,
+				err := quadtreeRoot.Visualize(*outputPath, cfg.VisualizationConfig.DrawGrid)
+			if err != nil {
+				panic(err)
+			}
+			utils.WriteImage("visualizationBase.png", baseVisualization)
+			utils.WriteImage("visualizationPadded.png", paddedVisualization)
+			utils.WriteImage("visualizationBlockBase.png", baseBlockVisualization)
+			utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
+		}
+
+		// TODO: Write quadtree structure to output
+		fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
+	case filetype.IsArchive(inputBuffer):
+		fmt.Println("Decoding fractal file")
+	default:
+		panic("filetype is neither image nor archive")
+	}
 }
