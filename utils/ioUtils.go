@@ -7,6 +7,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	_ "image/png"
+	"io"
 	"os"
 	"path"
 )
@@ -19,7 +20,12 @@ func ReadImage(path string) (img image.Image, err error) {
 	}
 
 	defer file.Close()
-	img, _, err = image.Decode(file)
+	return ReadImageFromReader(file)
+}
+
+// ReadImageFromReader takes an io.Reader and attempts to decode it into an image
+func ReadImageFromReader(reader io.Reader) (img image.Image, err error) {
+	img, _, err = image.Decode(reader)
 	return img, err
 }
 
