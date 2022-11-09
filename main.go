@@ -52,18 +52,15 @@ func main() {
 
 		// Visualize quadtree structure
 		if cfg.VisualizationConfig.Enable {
-			baseVisualization,
-				paddedVisualization,
-				baseBlockVisualization,
-				paddedBlockVisualization,
-				err := quadtreeRoot.Visualize()
-			if err != nil {
-				panic(err)
-			}
-			utils.WriteImage("visualizationBase.png", baseVisualization)
-			utils.WriteImage("visualizationPadded.png", paddedVisualization)
-			utils.WriteImage("visualizationBlockBase.png", baseBlockVisualization)
-			utils.WriteImage("visualizationBlockPadded.png", paddedBlockVisualization)
+			boxVisualization := quadtreeRoot.GetBoxImage(false)
+			boxVisualizationPadded := quadtreeRoot.GetBoxImage(true)
+			blockVisualization := quadtreeRoot.GetBlockImage(false)
+			blockVisualizationPadded := quadtreeRoot.GetBlockImage(true)
+
+			utils.WriteImage("boxVisualization.png", boxVisualization)
+			utils.WriteImage("boxVisualizationPadded.png", boxVisualizationPadded)
+			utils.WriteImage("blockVisualization.png", blockVisualization)
+			utils.WriteImage("blockVisualizationPadded.png", blockVisualizationPadded)
 		}
 
 		// TODO: Write quadtree structure to output
@@ -75,7 +72,7 @@ func main() {
 			panic(err)
 		}
 
-		decodedImage := quadtreeRoot.GetDecodedImage()
+		decodedImage := quadtreeRoot.GetBlockImage(false)
 		utils.WriteImage(*outputPath, decodedImage)
 	default:
 		panic("filetype is neither image nor archive")

@@ -149,49 +149,49 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 	return qti, nil
 }
 
-// GetDecodedImage returns the decoded image data from a populated quadtree
-// TODO: Duplicated code fragment
-func (q *QuadtreeImage) GetDecodedImage() image.Image {
-	images := q.child.visualize()
-	baseBounds := q.baseImage.Bounds()
+// GetBlockImage creates a representation of the image encoded in the quadtree.
+// If padded is true, the padding area around the original image is included as well.
+func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
+	childImages := q.child.visualize()
 
-	decodedImage := image.NewRGBA(image.Rect(0, 0, baseBounds.Dx(), baseBounds.Dy()))
-
-	for _, img := range images {
-		draw.Draw(decodedImage, img.Bounds(), img, img.Bounds().Min, draw.Src)
+	var inputBounds image.Rectangle
+	if padded {
+		inputBounds = q.paddedImage.Bounds()
+	} else {
+		inputBounds = q.baseImage.Bounds()
 	}
 
-	return decodedImage
+	blockImage := image.NewRGBA(image.Rect(0, 0, inputBounds.Dx(), inputBounds.Dy()))
+
+	// Draw blocks of quadtree leaves onto blockimage
+	for _, img := range childImages {
+		draw.Draw(blockImage, img.Bounds(), img, img.Bounds().Min, draw.Src)
+	}
+
+	return blockImage
 }
 
-// Visualize draws the bounding boxes of all Children onto a copy of the BaseImage and of the PaddedImage.
-// It also draws the upsampled JPEG blocks to show how the encoded result would look
-func (q *QuadtreeImage) Visualize() (image.Image, image.Image, image.Image, image.Image, error) {
-	images := q.child.visualize()
-	baseBounds := q.baseImage.Bounds()
-	paddedBounds := q.paddedImage.Bounds()
+// GetBoxImage creates a representation of the bounding boxes of the quadtree.
+// If padded is true, the padding area around the original image is included as well.
+func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
+	childImages := q.child.visualize()
 
-	baseImage := image.NewRGBA(image.Rect(0, 0, baseBounds.Dx(), baseBounds.Dy()))
-	draw.Draw(baseImage, baseImage.Bounds(), q.baseImage, baseBounds.Min, draw.Src)
-
-	paddedImage := image.NewRGBA(image.Rect(0, 0, paddedBounds.Dx(), paddedBounds.Dy()))
-	draw.Draw(paddedImage, paddedImage.Bounds(), q.paddedImage, paddedBounds.Min, draw.Src)
-
-	baseImageBlocks := image.NewRGBA(image.Rect(0, 0, baseBounds.Dx(), baseBounds.Dy()))
-
-	paddedImageBlocks := image.NewRGBA(image.Rect(0, 0, paddedBounds.Dx(), paddedBounds.Dy()))
-
-	for _, img := range images {
-		// Draw bounding boxes
-		utils.Rectangle(baseImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-		utils.Rectangle(paddedImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
-
-		// Combine separate upscaled blocks into whole images
-		draw.Draw(baseImageBlocks, img.Bounds(), img, img.Bounds().Min, draw.Src)
-		draw.Draw(paddedImageBlocks, img.Bounds(), img, img.Bounds().Min, draw.Src)
+	var inputImage image.Image
+	if padded {
+		inputImage = q.paddedImage
+	} else {
+		inputImage = q.baseImage
 	}
 
-	return baseImage, paddedImage, baseImageBlocks, paddedImageBlocks, nil
+	boxImage := image.NewRGBA(image.Rect(0, 0, inputImage.Bounds().Dx(), inputImage.Bounds().Dy()))
+	draw.Draw(boxImage, boxImage.Bounds(), inputImage, boxImage.Bounds().Min, draw.Src)
+
+	// Draw bounding boxes
+	for _, img := range childImages {
+		utils.Rectangle(boxImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+	}
+
+	return boxImage
 }
 
 // pad adds transparent padding to a copy of BaseImage to make it a square with an edge length that can be divided by a multiple of four to get a JPEG block
