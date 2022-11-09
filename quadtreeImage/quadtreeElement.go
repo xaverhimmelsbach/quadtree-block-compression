@@ -16,8 +16,8 @@ import (
 
 var interpolators = map[string]drawX.Interpolator{
 	"NearestNeighbor": drawX.NearestNeighbor,
-	"ApproxBilinear":  drawX.ApproxBiLinear,
-	"Bilinear":        drawX.BiLinear,
+	"ApproxBiLinear":  drawX.ApproxBiLinear,
+	"BiLinear":        drawX.BiLinear,
 	"CatmullRom":      drawX.CatmullRom,
 }
 
