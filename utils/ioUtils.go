@@ -6,6 +6,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 )
@@ -48,5 +49,25 @@ func WriteImage(filePath string, img image.Image) error {
 		err = fmt.Errorf("unknown file extension: %q", extension)
 	}
 
+	return err
+}
+
+// WriteFile writes data from an io.Reader to filePath
+func WriteFile(filePath string, reader io.Reader) error {
+	// Create file
+	targetFile, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer targetFile.Close()
+
+	// Read buffer
+	bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	// Write bytes
+	_, err = targetFile.Write(bytes)
 	return err
 }
