@@ -23,7 +23,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(cfg)
 
 	// TODO: Reuse buffer for image reading
 	inputBuffer, err := ioutil.ReadFile(*inputPath)
@@ -49,7 +48,7 @@ func main() {
 
 		// Encode quadtree structure
 		quadtreeRoot.Encode(*outputPath)
-		fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
+		fmt.Printf("Encoded %s as a quadtree image and wrote it to %s", *inputPath, *outputPath)
 
 		// Visualize quadtree structure
 		if cfg.VisualizationConfig.Enable {
@@ -64,7 +63,7 @@ func main() {
 			utils.WriteImage("blockVisualizationPadded.png", blockVisualizationPadded)
 		}
 	case filetype.IsArchive(inputBuffer):
-		fmt.Println("Decoding fractal file")
+		fmt.Println("Decoding quadtree file")
 		quadtreeRoot, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
 		if err != nil {
 			panic(err)
@@ -72,6 +71,7 @@ func main() {
 
 		decodedImage := quadtreeRoot.GetBlockImage(false)
 		utils.WriteImage(*outputPath, decodedImage)
+		fmt.Printf("Decoded %s and wrote it to %s", *inputPath, *outputPath)
 	default:
 		panic("filetype is neither image nor archive")
 	}

@@ -184,9 +184,6 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int) error {
 	// If path is empty a leaf has been reached
 	if path == "" {
-		// scale up file if needed and use as blockImage
-		fmt.Printf("Finished decoding at height %d\n", remainingHeight)
-
 		// Read image from zipFile
 		fileReader, err := file.Open()
 		if err != nil {
