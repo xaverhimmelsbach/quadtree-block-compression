@@ -119,3 +119,11 @@ func OutOfBounds(point image.Point, bounds image.Rectangle) bool {
 func CardinalLineOutOfBounds(start image.Point, end image.Point, bounds image.Rectangle) bool {
 	return OutOfBounds(start, bounds) && OutOfBounds(end, bounds)
 }
+
+// RectanglesCollide returns true if r1 and r2 collide
+func RectanglesCollide(r1 image.Rectangle, r2 image.Rectangle) bool {
+	return r1.Min.X < r2.Max.X &&
+		r1.Max.X > r2.Min.X &&
+		r1.Min.Y < r2.Max.Y &&
+		r1.Max.Y > r2.Min.Y
+}
