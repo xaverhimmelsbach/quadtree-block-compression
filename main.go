@@ -47,7 +47,16 @@ func main() {
 		quadtreeRoot.Partition()
 
 		// Encode quadtree structure
-		quadtreeRoot.Encode(*outputPath)
+		encoded, err := quadtreeRoot.Encode()
+		if err != nil {
+			panic(err)
+		}
+
+		err = utils.WriteFile(*outputPath, encoded)
+		if err != nil {
+			panic(err)
+		}
+
 		fmt.Printf("Encoded %s as a quadtree image and wrote it to %s", *inputPath, *outputPath)
 
 		// Visualize quadtree structure

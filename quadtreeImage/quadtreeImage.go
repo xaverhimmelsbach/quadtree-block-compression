@@ -2,13 +2,14 @@ package quadtreeImage
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
+	"io"
 	"io/ioutil"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 
@@ -50,31 +51,26 @@ func (q *QuadtreeImage) Partition() {
 	q.root.partition()
 }
 
-// Encode encodes a quadtree image into a single file and writes it to the file system
-func (q *QuadtreeImage) Encode(filePath string) error {
-	targetFile, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-
-	zipWriter := zip.NewWriter(targetFile)
-	defer zipWriter.Close()
+// Encode encodes a quadtree image into a single buffer and returns it
+func (q *QuadtreeImage) Encode() (io.Reader, error) {
+	buffer := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buffer)
 
 	// TODO: What happens if the first child can already encode the whole picture (e.g. solid color)?
 	// Encode the tree root, which recurses further down the quadtree if needed
-	err = q.root.encode(zipWriter)
+	err := q.root.encode(zipWriter)
 	if err != nil {
-		return err
+		return buffer, err
 	}
 
 	fileWriter, err := zipWriter.Create(MetaFile)
 	if err != nil {
-		return err
+		return buffer, err
 	}
 
 	treeHeight, err := q.getHeight()
 	if err != nil {
-		return err
+		return buffer, err
 	}
 
 	width := q.baseImage.Bounds().Dx()
@@ -85,7 +81,9 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 		strconv.Itoa(width) + "\n" +
 		strconv.Itoa(height)))
 
-	return err
+	// Close zipWriter explicitly to flush all files to buffer
+	zipWriter.Close()
+	return buffer, err
 }
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it
