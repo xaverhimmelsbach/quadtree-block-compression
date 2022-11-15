@@ -49,6 +49,7 @@ func main() {
 
 		// Encode quadtree structure
 		quadtreeRoot.Encode(*outputPath)
+		fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
 
 		// Visualize quadtree structure
 		if cfg.VisualizationConfig.Enable {
@@ -62,9 +63,6 @@ func main() {
 			utils.WriteImage("blockVisualization.png", blockVisualization)
 			utils.WriteImage("blockVisualizationPadded.png", blockVisualizationPadded)
 		}
-
-		// TODO: Write quadtree structure to output
-		fmt.Printf("Encoded %q as a quadtree image and wrote it to %q", *inputPath, *outputPath)
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding fractal file")
 		quadtreeRoot, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
