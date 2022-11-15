@@ -24,7 +24,8 @@ func ComparePixelsExact(imageA *image.RGBA, imageB *image.RGBA, globalBounds ima
 		for y := imageA.Bounds().Min.Y; y < imageA.Bounds().Max.Y; y++ {
 
 			// The padding is of no interest
-			if OutOfBounds(image.Point{X: x, Y: y}, globalBounds) {
+			// TODO: Use function to calculate overlapping area instead of checking every pixel seperately
+			if PointCollides(image.Point{X: x, Y: y}, globalBounds) {
 				skipped++
 				continue
 			}
@@ -66,7 +67,7 @@ func ComparePixelsWeighted(imageA *image.RGBA, imageB *image.RGBA, globalBounds 
 		for y := imageA.Bounds().Min.Y; y < imageA.Bounds().Max.Y; y++ {
 
 			// The padding is of no interest
-			if OutOfBounds(image.Point{X: x, Y: y}, globalBounds) {
+			if PointCollides(image.Point{X: x, Y: y}, globalBounds) {
 				skipped++
 				continue
 			}
@@ -100,24 +101,12 @@ func ComparePixelsWeighted(imageA *image.RGBA, imageB *image.RGBA, globalBounds 
 	return similarity, nil
 }
 
-// OutOfBounds returns whether a point is in a rectangle
-func OutOfBounds(point image.Point, bounds image.Rectangle) bool {
-	x := point.X
-	y := point.Y
-
-	rectXStart := bounds.Min.X
-	rectYStart := bounds.Min.Y
-	rectXEnd := bounds.Max.X
-	rectYEnd := bounds.Max.Y
-
-	return x < rectXStart ||
-		x > rectXEnd ||
-		y < rectYStart ||
-		y > rectYEnd
-}
-
-func CardinalLineOutOfBounds(start image.Point, end image.Point, bounds image.Rectangle) bool {
-	return OutOfBounds(start, bounds) && OutOfBounds(end, bounds)
+// PointCollides returns true if p collides with r
+func PointCollides(p image.Point, r image.Rectangle) bool {
+	return p.X < r.Min.X ||
+		p.X > r.Max.X ||
+		p.Y < r.Min.Y ||
+		p.Y > r.Max.Y
 }
 
 // RectanglesCollide returns true if r1 and r2 collide
