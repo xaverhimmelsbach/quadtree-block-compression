@@ -14,6 +14,7 @@ import (
 	drawX "golang.org/x/image/draw"
 )
 
+// interpolators holds the different interpolating algorithms that can be used for scaling block images
 var interpolators = map[string]drawX.Interpolator{
 	"NearestNeighbor": drawX.NearestNeighbor,
 	"ApproxBiLinear":  drawX.ApproxBiLinear,
@@ -21,17 +22,27 @@ var interpolators = map[string]drawX.Interpolator{
 	"CatmullRom":      drawX.CatmullRom,
 }
 
+// QuadtreeElement represents a node in the quadtree that can either be the parent of ChildCount children or contain a block image
 type QuadtreeElement struct {
-	baseImage         image.Image
-	blockImage        image.Image
+	// The section of the original image (with padding) that this QuadtreeElement occupies
+	baseImage image.Image
+	// baseImage scaled down to BlockSize
 	blockImageMinimal image.Image
-	children          []*QuadtreeElement
-	globalBounds      image.Rectangle
-	isLeaf            bool
-	config            *config.Config
-	id                string
+	// blockImageMinimal scaled back up to the size of baseImage
+	blockImage image.Image
+	// Children of this QuadtreeElement in the quadtree
+	children []*QuadtreeElement
+	// Bounding box of the original image, used for out-of-bounds-check
+	globalBounds image.Rectangle
+	// Is this QuadtreeElement a leaf and does it therefore contain an actual blockImage?
+	isLeaf bool
+	// Program configuration
+	config *config.Config
+	// Unique identifier of this QuadtreeElement
+	id string
 }
 
+// NewQuadtreeElement returns a fully populated QuadtreeImage occupying the space of baseImage
 func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
 
@@ -45,32 +56,34 @@ func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rec
 	return qte
 }
 
-// partition splits the BaseImage into four sub images, if further partitioning is necessary and calls their partition methods
+// partition splits the BaseImage into ChildCount subimages if further partitioning is required, and calls their partition methods
 func (q *QuadtreeElement) partition() {
 	q.children = make([]*QuadtreeElement, 0)
 
 	if !q.isLeaf {
 		// Partition BaseImage into sub images
 		for i := 0; i < ChildCount; i++ {
-			var xStart int
-			var yStart int
-			var xEnd int
-			var yEnd int
+			// TODO: this approach probably can't handle cases of ChildCount != 4
+			var xStart, yStart, xEnd, yEnd int
 
 			// Set x coordinates
 			if i&1 == 0 {
+				// Left block
 				xStart = q.baseImage.Bounds().Min.X
 				xEnd = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
 			} else {
+				// Right block
 				xStart = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
 				xEnd = q.baseImage.Bounds().Max.X
 			}
 
 			// Set y coordinates
 			if i&2 == 0 {
+				// Upper block
 				yStart = q.baseImage.Bounds().Min.Y
 				yEnd = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
 			} else {
+				// Lower block
 				yStart = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
 				yEnd = q.baseImage.Bounds().Max.Y
 			}
@@ -89,7 +102,7 @@ func (q *QuadtreeElement) partition() {
 
 // checkIsLeaf checks whether the current block needs to be partitioned further
 func (q *QuadtreeElement) checkIsLeaf() bool {
-	// If the size of a JPEG block was reached, don't partition further
+	// If BlockSize was reached, don't partition further
 	if q.baseImage.Bounds().Dx() <= BlockSize || q.baseImage.Bounds().Dy() <= BlockSize {
 		return true
 	}
@@ -97,6 +110,7 @@ func (q *QuadtreeElement) checkIsLeaf() bool {
 	// All blocks with a similarity of less than this need to be split further
 	cutoff := q.config.Quadtree.SimilarityCutoff
 
+	// Compare blockImage with baseImage
 	return q.compareImages() > cutoff
 }
 
@@ -104,31 +118,33 @@ func (q *QuadtreeElement) checkIsLeaf() bool {
 func (q *QuadtreeElement) createBlockImages() (image.Image, image.Image) {
 	baseImage := q.baseImage.(*image.RGBA)
 
+	// Load inteprolators
 	downsamplingInterpolator, err := getInterpolator(q.config.Quadtree.DownsamplingInterpolator)
 	if err != nil {
 		panic(err)
 	}
-	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, BlockSize, BlockSize), downsamplingInterpolator)
-	downsampledImageRGBA := downsampledImage.(*image.RGBA)
-
 	upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)
 	if err != nil {
 		panic(err)
 	}
-	blockImage := utils.Scale(downsampledImageRGBA,
-		image.Rect(q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y, q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y),
-		upsamplingInterpolator).(*image.RGBA)
+
+	// Scale baseImage down to BlockSize
+	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, BlockSize, BlockSize), downsamplingInterpolator)
+	downsampledImageRGBA := downsampledImage.(*image.RGBA)
+
+	// Scale downsampled image back up to size of baseImage
+	blockImage := utils.Scale(downsampledImageRGBA, q.baseImage.Bounds(), upsamplingInterpolator).(*image.RGBA)
 
 	return blockImage, downsampledImage
 }
 
-// compareImages compares the scaled down JPEG block with the base image of this element
+// compareImages compares blockImage with baseImage
 func (q *QuadtreeElement) compareImages() float64 {
 	baseImage := q.baseImage.(*image.RGBA)
 	blockImage := q.blockImage.(*image.RGBA)
 
 	similarity, err := utils.ComparePixelsWeighted(blockImage, baseImage, q.globalBounds)
-	// TODO: Handle errors better
+	// TODO: Handle errors better (e.g. by wrapping errors and returning them here as well)
 	if err != nil {
 		panic(err)
 	}
@@ -149,6 +165,7 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 			return err
 		}
 
+		// Encode blockImageMinimal as JPEG
 		err = jpeg.Encode(fileWriter, q.blockImageMinimal, nil)
 		if err != nil {
 			return err
@@ -163,11 +180,14 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 	return nil
 }
 
+// decode reconstructs the quadtree structure from a zip file
 func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int) error {
+	// If path is empty a leaf has been reached
 	if path == "" {
 		// scale up file if needed and use as blockImage
 		fmt.Printf("Finished decoding at height %d\n", remainingHeight)
 
+		// Read image from zipFile
 		fileReader, err := file.Open()
 		if err != nil {
 			return err
@@ -177,49 +197,50 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 		if err != nil {
 			return err
 		}
+
 		fileImageRGBA := image.NewRGBA(fileImage.Bounds())
 		draw.Draw(fileImageRGBA, fileImageRGBA.Bounds(), fileImage, fileImage.Bounds().Min, draw.Src)
 
 		// Duplicate code fragment
+		// Reconstruct blockImage by scaling fileImage up from BlockSize
 		upsamplingInterpolator, err := getInterpolator(q.config.Quadtree.UpsamplingInterpolator)
 		if err != nil {
 			panic(err)
 		}
-		blockImage := utils.Scale(fileImageRGBA,
-			image.Rect(q.baseImage.Bounds().Min.X, q.baseImage.Bounds().Min.Y, q.baseImage.Bounds().Max.X, q.baseImage.Bounds().Max.Y),
-			upsamplingInterpolator).(*image.RGBA)
-
-		q.blockImage = blockImage
+		q.blockImage = utils.Scale(fileImageRGBA, q.baseImage.Bounds(), upsamplingInterpolator).(*image.RGBA)
 
 		return nil
 	}
 
+	// Abort if the minimal tree height was reached and no leaf was detected yet
 	if remainingHeight == 0 {
-		return fmt.Errorf("further partition according to path %s would lead to remaining height being smaller than 0 in %s", path, q.id)
+		return fmt.Errorf("further partitioning according to path %s would lead to remaining height being smaller than 0 in %s", path, q.id)
 	}
 
+	// If children haven't been created yet, create them
 	if len(q.children) != ChildCount {
 		// TODO: More or less duplicate code fragment
 		for i := 0; i < ChildCount; i++ {
-			var xStart int
-			var yStart int
-			var xEnd int
-			var yEnd int
+			var xStart, yStart, xEnd, yEnd int
 
 			// Set x coordinates
 			if i&1 == 0 {
+				// Left block
 				xStart = q.baseImage.Bounds().Min.X
 				xEnd = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
 			} else {
+				// Right block
 				xStart = q.baseImage.Bounds().Min.X + q.baseImage.Bounds().Dx()/2
 				xEnd = q.baseImage.Bounds().Max.X
 			}
 
 			// Set y coordinates
 			if i&2 == 0 {
+				// Upper block
 				yStart = q.baseImage.Bounds().Min.Y
 				yEnd = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
 			} else {
+				// Lower block
 				yStart = q.baseImage.Bounds().Min.Y + q.baseImage.Bounds().Dy()/2
 				yEnd = q.baseImage.Bounds().Max.Y
 			}
@@ -227,8 +248,7 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 			// Copy BaseImage section to sub image
 			childImage := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
 
-			// Create and partition child
-			// NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.config)
+			// Create and append child without using NewQuadtreeElement as the block images are irrelevant during decoding
 			child := &QuadtreeElement{
 				id:        q.id + strconv.Itoa(i),
 				baseImage: childImage,
@@ -238,36 +258,39 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 		}
 	}
 
+	// Get next child from path
 	splitPath := strings.Split(path, "/")
 	childId, err := strconv.Atoi(splitPath[0])
 	if err != nil {
 		return err
 	}
 
+	// Sanity check childId
 	if childId >= ChildCount {
 		return fmt.Errorf("childId %d is greater than child count (%d)", childId, ChildCount)
 	}
 
+	// Recurse into next child
 	recursePath := strings.Join(splitPath[1:], "/")
-
 	return q.children[childId].decode(recursePath, file, remainingHeight-1)
 }
 
-// visualize returns its own bounding box if it has no children, else it returns its childrens bounding boxes
+// visualize returns its own blockImage if it has no children, else it returns its childrens blockImages
 func (q *QuadtreeElement) visualize() []image.Image {
-	rects := make([]image.Image, 0)
+	images := make([]image.Image, 0)
 
 	if len(q.children) == 0 {
-		rects = append(rects, q.blockImage)
+		images = append(images, q.blockImage)
 	} else {
 		for _, child := range q.children {
-			rects = append(rects, child.visualize()...)
+			images = append(images, child.visualize()...)
 		}
 	}
 
-	return rects
+	return images
 }
 
+// getInterpolator returns the correct interpolation algorithm for an interpolatorId from interpolators
 func getInterpolator(interpolatorId string) (drawX.Interpolator, error) {
 	interpolator, ok := interpolators[interpolatorId]
 	var err error
