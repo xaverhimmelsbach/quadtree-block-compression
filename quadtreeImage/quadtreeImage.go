@@ -16,11 +16,16 @@ import (
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 )
 
+// QuadtreeImage holds and manages a quadtree image
 type QuadtreeImage struct {
-	baseImage   image.Image
+	// Original image
+	baseImage image.Image
+	// Original image with added padding to make it quadratic
 	paddedImage image.Image
-	child       *QuadtreeElement
-	config      *config.Config
+	// Root node of the quadtree
+	root *QuadtreeElement
+	// Program configuration
+	config *config.Config
 }
 
 // NewQuadtreeImage constructs a well-formed instance of QuadtreeImage from a baseImage
@@ -37,15 +42,15 @@ func NewQuadtreeImage(baseImage image.Image, cfg *config.Config) *QuadtreeImage 
 // Partition splits the BaseImage into an appropriate number of sub images and calls their partition method
 func (q *QuadtreeImage) Partition() {
 	// Create root of the quadtree
-	childImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
-	draw.Draw(childImage, childImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
-	q.child = NewQuadtreeElement("", childImage, q.baseImage.Bounds(), q.config)
+	rootImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
+	draw.Draw(rootImage, rootImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
+	q.root = NewQuadtreeElement("", rootImage, q.baseImage.Bounds(), q.config)
 
 	// Start partitioning the quadtree
-	q.child.partition()
+	q.root.partition()
 }
 
-// Encode encodes a quadtree image into single file and writes it to the file system
+// Encode encodes a quadtree image into a single file and writes it to the file system
 func (q *QuadtreeImage) Encode(filePath string) error {
 	targetFile, err := os.Create(filePath)
 	if err != nil {
@@ -56,7 +61,8 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 	defer zipWriter.Close()
 
 	// TODO: What happens if the first child can already encode the whole picture (e.g. solid color)?
-	err = q.child.encode(zipWriter)
+	// Encode the tree root, which recurses further down the quadtree if needed
+	err = q.root.encode(zipWriter)
 	if err != nil {
 		return err
 	}
@@ -74,6 +80,7 @@ func (q *QuadtreeImage) Encode(filePath string) error {
 	width := q.baseImage.Bounds().Dx()
 	height := q.baseImage.Bounds().Dy()
 
+	// Write metadata
 	fileWriter.Write([]byte(strconv.Itoa(treeHeight) + "\n" +
 		strconv.Itoa(width) + "\n" +
 		strconv.Itoa(height)))
@@ -98,6 +105,7 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		return nil, err
 	}
 
+	// Parse metadata
 	meta := strings.Split(string(metaBytes), "\n")
 	if len(meta) != 3 {
 		return nil, fmt.Errorf("meta file contained %d newline-seperated values instead of three", len(meta))
@@ -120,27 +128,25 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 
 	baseImage := image.NewRGBA(image.Rect(0, 0, width, height))
 
-	// Construct QuadtreeImage manually to avoid creating a paddedImage
-	qti := &QuadtreeImage{
-		baseImage: baseImage,
-		config:    cfg,
-	}
+	// Create QuadtreeImage
+	qti := NewQuadtreeImage(baseImage, cfg)
 
-	qti.paddedImage = qti.pad()
-
-	qti.child = &QuadtreeElement{
+	// Create root manually to avoid calling its partition method
+	qti.root = &QuadtreeElement{
 		id:        "",
 		config:    cfg,
 		baseImage: qti.paddedImage,
 	}
 
+	// Iterate over zips contents and decode them
 	for _, file := range zipReader.File {
-		// Skip height file
+		// Skip metadata
 		if file.Name == MetaFile {
 			continue
 		}
 
-		err = qti.child.decode(file.Name, file, treeHeight)
+		// Decode file into quadtree
+		err = qti.root.decode(file.Name, file, treeHeight)
 		if err != nil {
 			return qti, err
 		}
@@ -152,8 +158,9 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 // GetBlockImage creates a representation of the image encoded in the quadtree.
 // If padded is true, the padding area around the original image is included as well.
 func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
-	childImages := q.child.visualize()
+	childImages := q.root.visualize()
 
+	// Choose correct inputImage
 	var inputBounds image.Rectangle
 	if padded {
 		inputBounds = q.paddedImage.Bounds()
@@ -161,6 +168,7 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 		inputBounds = q.baseImage.Bounds()
 	}
 
+	// Setup bounds of blockImage
 	blockImage := image.NewRGBA(image.Rect(0, 0, inputBounds.Dx(), inputBounds.Dy()))
 
 	// Draw blocks of quadtree leaves onto blockimage
@@ -174,8 +182,9 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 // GetBoxImage creates a representation of the bounding boxes of the quadtree.
 // If padded is true, the padding area around the original image is included as well.
 func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
-	childImages := q.child.visualize()
+	childImages := q.root.visualize()
 
+	// Choose correct inputImage
 	var inputImage image.Image
 	if padded {
 		inputImage = q.paddedImage
@@ -183,6 +192,7 @@ func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
 		inputImage = q.baseImage
 	}
 
+	// Copy inputImage onto boxImage
 	boxImage := image.NewRGBA(image.Rect(0, 0, inputImage.Bounds().Dx(), inputImage.Bounds().Dy()))
 	draw.Draw(boxImage, boxImage.Bounds(), inputImage, boxImage.Bounds().Min, draw.Src)
 
@@ -221,9 +231,9 @@ func (q *QuadtreeImage) pad() image.Image {
 	return paddedImage
 }
 
-// getHeight returns how high the quadtree would need to be, to have children of size BlockSize as leaves
+// getHeight returns how high the quadtree would need to be to have children of size BlockSize as leaves
 func (q *QuadtreeImage) getHeight() (int, error) {
-	// Make sure that paddedImage is quadratic
+	// Ensure that paddedImage is quadratic
 	dx := q.paddedImage.Bounds().Dx()
 	dy := q.paddedImage.Bounds().Dy()
 
@@ -233,6 +243,6 @@ func (q *QuadtreeImage) getHeight() (int, error) {
 
 	// How many blocks would the tree be made up of in the worst case?
 	blockCount := float64(dx) / float64(BlockSize)
-	// How often the tree would need to partition to get to blocks of size BlockSize?
+	// How often would the tree need to partition to get to blocks of size BlockSize?
 	return int(math.Log2(blockCount)), nil
 }
