@@ -22,14 +22,14 @@ var interpolators = map[string]drawX.Interpolator{
 }
 
 type QuadtreeElement struct {
-	baseImage      image.Image
-	blockImage     image.Image
-	blockImageJPEG image.Image
-	children       []*QuadtreeElement
-	globalBounds   image.Rectangle
-	isLeaf         bool
-	config         *config.Config
-	id             string
+	baseImage         image.Image
+	blockImage        image.Image
+	blockImageMinimal image.Image
+	children          []*QuadtreeElement
+	globalBounds      image.Rectangle
+	isLeaf            bool
+	config            *config.Config
+	id                string
 }
 
 func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
@@ -39,7 +39,7 @@ func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rec
 	qte.config = cfg
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
-	qte.blockImage, qte.blockImageJPEG = qte.createBlockImage()
+	qte.blockImage, qte.blockImageMinimal = qte.createBlockImages()
 	qte.isLeaf = qte.checkIsLeaf()
 
 	return qte
@@ -100,8 +100,8 @@ func (q *QuadtreeElement) checkIsLeaf() bool {
 	return q.compareImages() > cutoff
 }
 
-// createBlockImage scales the baseImage down to the size of a JPEG block and then scales it back up to the original size
-func (q *QuadtreeElement) createBlockImage() (image.Image, image.Image) {
+// createBlockImages scales the baseImage down to BlockSize and then scales it back up to the original size
+func (q *QuadtreeElement) createBlockImages() (image.Image, image.Image) {
 	baseImage := q.baseImage.(*image.RGBA)
 
 	downsamplingInterpolator, err := getInterpolator(q.config.Quadtree.DownsamplingInterpolator)
@@ -149,7 +149,7 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 			return err
 		}
 
-		err = jpeg.Encode(fileWriter, q.blockImageJPEG, nil)
+		err = jpeg.Encode(fileWriter, q.blockImageMinimal, nil)
 		if err != nil {
 			return err
 		}
