@@ -36,6 +36,8 @@ type QuadtreeElement struct {
 	globalBounds image.Rectangle
 	// Is this QuadtreeElement a leaf and does it therefore contain an actual blockImage?
 	isLeaf bool
+	// Can this block be skipped during encoding?
+	canBeSkipped bool
 	// Program configuration
 	config *config.Config
 	// Unique identifier of this QuadtreeElement
@@ -46,6 +48,7 @@ type QuadtreeElement struct {
 type VisualizationElement struct {
 	// Image section
 	image        image.Image
+	canBeSkipped bool
 }
 
 // NewQuadtreeElement returns a fully populated QuadtreeImage occupying the space of baseImage
@@ -57,7 +60,7 @@ func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rec
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
 	qte.blockImage, qte.blockImageMinimal = qte.createBlockImages()
-	qte.isLeaf = qte.checkIsLeaf()
+	qte.isLeaf, qte.canBeSkipped = qte.checkIsLeaf()
 
 	return qte
 }
@@ -106,18 +109,20 @@ func (q *QuadtreeElement) partition() {
 	}
 }
 
-// checkIsLeaf checks whether the current block needs to be partitioned further
-func (q *QuadtreeElement) checkIsLeaf() bool {
-	// If BlockSize was reached, don't partition further
-	if q.baseImage.Bounds().Dx() <= BlockSize || q.baseImage.Bounds().Dy() <= BlockSize {
-		return true
+// checkIsLeaf checks whether the current block needs to be partitioned further and if it can be skipped during encoding
+func (q *QuadtreeElement) checkIsLeaf() (bool, bool) {
+	// If the current block is completely out of bounds it doesn't need further partitioning and can be skipped during encoding
+	if !utils.RectanglesCollide(q.blockImage.Bounds(), q.globalBounds) {
+		return true, true
 	}
 
-	// All blocks with a similarity of less than this need to be split further
-	cutoff := q.config.Quadtree.SimilarityCutoff
+	// If the minimal BlockSize was reached, don't partition further
+	if q.baseImage.Bounds().Dx() <= BlockSize || q.baseImage.Bounds().Dy() <= BlockSize {
+		return true, false
+	}
 
 	// Compare blockImage with baseImage
-	return q.compareImages() > cutoff
+	return q.compareImages() > q.config.Quadtree.SimilarityCutoff, false
 }
 
 // createBlockImages scales the baseImage down to BlockSize and then scales it back up to the original size
@@ -283,7 +288,7 @@ func (q *QuadtreeElement) visualize() []VisualizationElement {
 	visualizations := make([]VisualizationElement, 0)
 
 	if len(q.children) == 0 {
-		visualizations = append(visualizations, VisualizationElement{image: q.blockImage})
+		visualizations = append(visualizations, VisualizationElement{image: q.blockImage, canBeSkipped: q.canBeSkipped})
 	} else {
 		for _, child := range q.children {
 			visualizations = append(visualizations, child.visualize()...)

@@ -171,7 +171,10 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 
 	// Draw blocks of quadtree leaves onto blockimage
 	for _, visualization := range visualizations {
-		draw.Draw(blockImage, visualization.image.Bounds(), visualization.image, visualization.image.Bounds().Min, draw.Src)
+		// Skip skippable blocks for unpadded images
+		if padded || !visualization.canBeSkipped {
+			draw.Draw(blockImage, visualization.image.Bounds(), visualization.image, visualization.image.Bounds().Min, draw.Src)
+		}
 	}
 
 	return blockImage
@@ -196,7 +199,10 @@ func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
 
 	// Draw bounding boxes
 	for _, visualization := range visualizations {
-		utils.Rectangle(boxImage, visualization.image.Bounds().Min.X, visualization.image.Bounds().Max.X, visualization.image.Bounds().Min.Y, visualization.image.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+		// Skip skippable boxes for unpadded images
+		if padded || !visualization.canBeSkipped {
+			utils.Rectangle(boxImage, visualization.image.Bounds().Min.X, visualization.image.Bounds().Max.X, visualization.image.Bounds().Min.Y, visualization.image.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+		}
 	}
 
 	return boxImage
