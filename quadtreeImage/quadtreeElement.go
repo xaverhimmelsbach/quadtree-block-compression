@@ -33,7 +33,7 @@ type QuadtreeElement struct {
 	// Children of this QuadtreeElement in the quadtree
 	children []*QuadtreeElement
 	// Bounding box of the original image, used for out-of-bounds-check
-	globalBounds image.Rectangle
+	globalBounds *image.Rectangle
 	// Is this QuadtreeElement a leaf and does it therefore contain an actual blockImage?
 	isLeaf bool
 	// Can this block be skipped during encoding?
@@ -52,7 +52,7 @@ type VisualizationElement struct {
 }
 
 // NewQuadtreeElement returns a fully populated QuadtreeImage occupying the space of baseImage
-func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
+func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Rectangle, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
 
 	qte.id = id
@@ -112,7 +112,7 @@ func (q *QuadtreeElement) partition() {
 // checkIsLeaf checks whether the current block needs to be partitioned further and if it can be skipped during encoding
 func (q *QuadtreeElement) checkIsLeaf() (bool, bool) {
 	// If the current block is completely out of bounds it doesn't need further partitioning and can be skipped during encoding
-	if !utils.RectanglesCollide(q.blockImage.Bounds(), q.globalBounds) {
+	if !utils.RectanglesCollide(q.blockImage.Bounds(), *q.globalBounds) {
 		return true, true
 	}
 
@@ -154,7 +154,7 @@ func (q *QuadtreeElement) compareImages() float64 {
 	baseImage := q.baseImage.(*image.RGBA)
 	blockImage := q.blockImage.(*image.RGBA)
 
-	similarity, err := utils.ComparePixelsWeighted(blockImage, baseImage, q.globalBounds)
+	similarity, err := utils.ComparePixelsWeighted(blockImage, baseImage, *q.globalBounds)
 	// TODO: Handle errors better (e.g. by wrapping errors and returning them here as well)
 	if err != nil {
 		panic(err)

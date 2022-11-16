@@ -45,7 +45,8 @@ func (q *QuadtreeImage) Partition() {
 	// Create root of the quadtree
 	rootImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(rootImage, rootImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
-	q.root = NewQuadtreeElement("", rootImage, q.baseImage.Bounds(), q.config)
+	globalBounds := q.baseImage.Bounds()
+	q.root = NewQuadtreeElement("", rootImage, &globalBounds, q.config)
 
 	// Start partitioning the quadtree
 	q.root.partition()
