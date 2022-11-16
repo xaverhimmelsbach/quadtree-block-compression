@@ -156,7 +156,7 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 // GetBlockImage creates a representation of the image encoded in the quadtree.
 // If padded is true, the padding area around the original image is included as well.
 func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
-	childImages := q.root.visualize()
+	visualizations := q.root.visualize()
 
 	// Choose correct inputImage
 	var inputBounds image.Rectangle
@@ -170,8 +170,8 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 	blockImage := image.NewRGBA(image.Rect(0, 0, inputBounds.Dx(), inputBounds.Dy()))
 
 	// Draw blocks of quadtree leaves onto blockimage
-	for _, img := range childImages {
-		draw.Draw(blockImage, img.Bounds(), img, img.Bounds().Min, draw.Src)
+	for _, visualization := range visualizations {
+		draw.Draw(blockImage, visualization.image.Bounds(), visualization.image, visualization.image.Bounds().Min, draw.Src)
 	}
 
 	return blockImage
@@ -180,7 +180,7 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 // GetBoxImage creates a representation of the bounding boxes of the quadtree.
 // If padded is true, the padding area around the original image is included as well.
 func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
-	childImages := q.root.visualize()
+	visualizations := q.root.visualize()
 
 	// Choose correct inputImage
 	var inputImage image.Image
@@ -195,8 +195,8 @@ func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
 	draw.Draw(boxImage, boxImage.Bounds(), inputImage, boxImage.Bounds().Min, draw.Src)
 
 	// Draw bounding boxes
-	for _, img := range childImages {
-		utils.Rectangle(boxImage, img.Bounds().Min.X, img.Bounds().Max.X, img.Bounds().Min.Y, img.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+	for _, visualization := range visualizations {
+		utils.Rectangle(boxImage, visualization.image.Bounds().Min.X, visualization.image.Bounds().Max.X, visualization.image.Bounds().Min.Y, visualization.image.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
 	}
 
 	return boxImage

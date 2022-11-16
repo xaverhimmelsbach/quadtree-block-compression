@@ -42,6 +42,12 @@ type QuadtreeElement struct {
 	id string
 }
 
+// VisualizationElement holds an image section and additional information relevant during visualization
+type VisualizationElement struct {
+	// Image section
+	image        image.Image
+}
+
 // NewQuadtreeElement returns a fully populated QuadtreeImage occupying the space of baseImage
 func NewQuadtreeElement(id string, baseImage image.Image, globalBounds image.Rectangle, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
@@ -273,18 +279,18 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 }
 
 // visualize returns its own blockImage if it has no children, else it returns its childrens blockImages
-func (q *QuadtreeElement) visualize() []image.Image {
-	images := make([]image.Image, 0)
+func (q *QuadtreeElement) visualize() []VisualizationElement {
+	visualizations := make([]VisualizationElement, 0)
 
 	if len(q.children) == 0 {
-		images = append(images, q.blockImage)
+		visualizations = append(visualizations, VisualizationElement{image: q.blockImage})
 	} else {
 		for _, child := range q.children {
-			images = append(images, child.visualize()...)
+			visualizations = append(visualizations, child.visualize()...)
 		}
 	}
 
-	return images
+	return visualizations
 }
 
 // getInterpolator returns the correct interpolation algorithm for an interpolatorId from interpolators
