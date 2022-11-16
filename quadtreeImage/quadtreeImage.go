@@ -172,7 +172,7 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 	// Draw blocks of quadtree leaves onto blockimage
 	for _, visualization := range visualizations {
 		// Skip skippable blocks for unpadded images
-		if padded || !visualization.canBeSkipped {
+		if visualization.image != nil && (padded || !visualization.canBeSkipped) {
 			draw.Draw(blockImage, visualization.image.Bounds(), visualization.image, visualization.image.Bounds().Min, draw.Src)
 		}
 	}

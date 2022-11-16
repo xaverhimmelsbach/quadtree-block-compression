@@ -15,6 +15,11 @@ type QuadtreeConfig struct {
 	UpsamplingInterpolator string `yaml:"UpsamplingInterpolator"`
 }
 
+type EncodingConfig struct {
+	// Should blocks that are not visible be skipped during encoding
+	SkipOutOfBoundsBlocks bool `yaml:"SkipOutOfBoundsBlocks"`
+}
+
 type VisualizationConfig struct {
 	// Should the visualizations be created?
 	Enable bool `yaml:"Enable"`
@@ -23,6 +28,7 @@ type VisualizationConfig struct {
 // Config holds parameters that influence the partitioning and encoding process of the quadtree
 type Config struct {
 	Quadtree            QuadtreeConfig      `yaml:"Quadtree"`
+	Encoding            EncodingConfig      `yaml:"Encoding"`
 	VisualizationConfig VisualizationConfig `yaml:"Visualization"`
 }
 

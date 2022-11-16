@@ -169,7 +169,8 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 	// TODO: can this be optimized?
 	path := strings.Join(strings.Split(q.id, ""), "/")
 
-	if q.isLeaf {
+	// Skip leaves that are out of bounds
+	if q.isLeaf && (!q.config.Encoding.SkipOutOfBoundsBlocks || !q.canBeSkipped) {
 		// Either create and encode an image file if this is a quadtree leaf
 		fileWriter, err := zipWriter.Create(path)
 		if err != nil {

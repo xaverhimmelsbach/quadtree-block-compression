@@ -7,6 +7,11 @@ Quadtree:
   # Interpolation algorithm used to upsample downsampled image
   UpsamplingInterpolator: NearestNeighbor
 
+# Encoding Config
+Encoding:
+  # Should blocks that are not visible be skipped during encoding
+  SkipOutOfBoundsBlocks: True
+
 # Visualization Config
 Visualization:
   # Should the visualizations be created?
