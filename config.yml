@@ -5,7 +5,7 @@ Quadtree:
   # Interpolation algorithm used to downsample base image
   DownsamplingInterpolator: NearestNeighbor
   # Interpolation algorithm used to upsample downsampled image
-  UpsamplingInterpolator: NearestNeighbor
+  UpsamplingInterpolator: CatmullRom
 
 # Encoding Config
 Encoding:
