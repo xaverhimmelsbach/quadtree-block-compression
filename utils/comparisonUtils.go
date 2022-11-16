@@ -91,8 +91,10 @@ func ComparePixelsWeighted(imageA *image.RGBA, imageB *image.RGBA, globalBounds 
 	}
 
 	// If none of the checked pixels were inside bounds signal that no further partitioning is required
+	// TODO: this shouldn't happen for quadtreeElements as they check for collisions before calling this function
 	relevantPixels := imageA.Bounds().Dx()*imageA.Bounds().Dy() - skipped
 	if relevantPixels <= 0 {
+		fmt.Println("0 relevant pixels found. This shouldn't happen when calling ComparePixelsWeighted from compareImages on a quadtreeElement")
 		return 1, nil
 	}
 
