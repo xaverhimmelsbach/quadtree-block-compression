@@ -68,8 +68,8 @@ func main() {
 
 			utils.WriteImage("boxVisualization.png", boxVisualization)
 			utils.WriteImage("boxVisualizationPadded.png", boxVisualizationPadded)
-			utils.WriteImage("blockVisualization.png", blockVisualization)
-			utils.WriteImage("blockVisualizationPadded.png", blockVisualizationPadded)
+			utils.WriteImage("blockVisualization.jpg", blockVisualization)
+			utils.WriteImage("blockVisualizationPadded.jpg", blockVisualizationPadded)
 		}
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
