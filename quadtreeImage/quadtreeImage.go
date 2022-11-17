@@ -25,6 +25,8 @@ type QuadtreeImage struct {
 	paddedImage image.Image
 	// Root node of the quadtree
 	root *QuadtreeElement
+	// List of all currently existing quadtree blocks of size BlockSize
+	existingBlocks **[]*image.Image
 	// Program configuration
 	config *config.Config
 }
@@ -37,6 +39,11 @@ func NewQuadtreeImage(baseImage image.Image, cfg *config.Config) *QuadtreeImage 
 	qti.baseImage = baseImage
 	qti.paddedImage = qti.pad()
 
+	// Create pointer to shared block list
+	blocks := new([]*image.Image)
+	// Create pointer to pointer so that quadtreeElements can modify the shared list
+	qti.existingBlocks = &blocks
+
 	return qti
 }
 
@@ -46,7 +53,7 @@ func (q *QuadtreeImage) Partition() {
 	rootImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(rootImage, rootImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
 	globalBounds := q.baseImage.Bounds()
-	q.root = NewQuadtreeElement("", rootImage, &globalBounds, q.config)
+	q.root = NewQuadtreeElement("", rootImage, &globalBounds, q.existingBlocks, q.config)
 
 	// Start partitioning the quadtree
 	q.root.partition()
@@ -57,9 +64,12 @@ func (q *QuadtreeImage) Encode() (io.Reader, error) {
 	buffer := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buffer)
 
+	// Keep map of encoded blocks and their path in the zip for deduplication
+	encodedBlockPaths := make(map[*image.Image]string)
+
 	// TODO: What happens if the first child can already encode the whole picture (e.g. solid color)?
 	// Encode the tree root, which recurses further down the quadtree if needed
-	err := q.root.encode(zipWriter)
+	err := q.root.encode(zipWriter, &encodedBlockPaths)
 	if err != nil {
 		return buffer, err
 	}
@@ -145,7 +155,7 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		}
 
 		// Decode file into quadtree
-		err = qti.root.decode(file.Name, file, treeHeight)
+		err = qti.root.decode(file.Name, file, treeHeight, zipReader)
 		if err != nil {
 			return qti, err
 		}

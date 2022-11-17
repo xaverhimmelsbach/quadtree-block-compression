@@ -6,9 +6,11 @@ import (
 	"image"
 	"image/draw"
 	"image/jpeg"
+	"io/ioutil"
 	"strconv"
 	"strings"
 
+	"github.com/h2non/filetype"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
 	drawX "golang.org/x/image/draw"
@@ -27,13 +29,15 @@ type QuadtreeElement struct {
 	// The section of the original image (with padding) that this QuadtreeElement occupies
 	baseImage image.Image
 	// baseImage scaled down to BlockSize
-	blockImageMinimal image.Image
+	blockImageMinimal *image.Image
 	// blockImageMinimal scaled back up to the size of baseImage
 	blockImage image.Image
 	// Children of this QuadtreeElement in the quadtree
 	children []*QuadtreeElement
 	// Bounding box of the original image, used for out-of-bounds-check
 	globalBounds *image.Rectangle
+	// List of all currently existing quadtree blocks of size BlockSize
+	existingBlocks **[]*image.Image
 	// Is this QuadtreeElement a leaf and does it therefore contain an actual blockImage?
 	isLeaf bool
 	// Can this block be skipped during encoding?
@@ -52,13 +56,14 @@ type VisualizationElement struct {
 }
 
 // NewQuadtreeElement returns a fully populated QuadtreeImage occupying the space of baseImage
-func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Rectangle, cfg *config.Config) *QuadtreeElement {
+func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Rectangle, existingBlocks **[]*image.Image, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
 
 	qte.id = id
 	qte.config = cfg
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
+	qte.existingBlocks = existingBlocks
 	qte.blockImage, qte.blockImageMinimal = qte.createBlockImages()
 	qte.isLeaf, qte.canBeSkipped = qte.checkIsLeaf()
 
@@ -102,7 +107,7 @@ func (q *QuadtreeElement) partition() {
 			draw.Draw(childImage, childImage.Bounds(), q.baseImage, childImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
-			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.config)
+			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.existingBlocks, q.config)
 			q.children = append(q.children, child)
 			child.partition()
 		}
@@ -126,7 +131,7 @@ func (q *QuadtreeElement) checkIsLeaf() (bool, bool) {
 }
 
 // createBlockImages scales the baseImage down to BlockSize and then scales it back up to the original size
-func (q *QuadtreeElement) createBlockImages() (image.Image, image.Image) {
+func (q *QuadtreeElement) createBlockImages() (image.Image, *image.Image) {
 	baseImage := q.baseImage.(*image.RGBA)
 
 	// Load inteprolators
@@ -143,10 +148,48 @@ func (q *QuadtreeElement) createBlockImages() (image.Image, image.Image) {
 	downsampledImage := utils.Scale(baseImage, image.Rect(0, 0, BlockSize, BlockSize), downsamplingInterpolator)
 	downsampledImageRGBA := downsampledImage.(*image.RGBA)
 
+	// Attempt to deduplicate blocks
+	if q.config.Encoding.DeduplicateBlocks.Enable {
+		bestSimilarity := 0.0
+		var bestBlock *image.Image
+		var bestBlockRGBA *image.RGBA
+
+		// Compare existing blocks with current block
+		for _, otherImage := range **q.existingBlocks {
+			otherImageRGBA := (*otherImage).(*image.RGBA)
+
+			// Compute similarity
+			similarity, err := utils.ComparePixelsWeighted(downsampledImageRGBA, otherImageRGBA, downsampledImageRGBA.Rect)
+			if err != nil {
+				panic(err)
+			}
+
+			// Apply new best block match
+			if similarity > bestSimilarity {
+				bestSimilarity = similarity
+				bestBlock = otherImage
+				bestBlockRGBA = otherImageRGBA
+			}
+		}
+
+		// If a block was found that is sufficiently similar
+		if bestBlock != nil && bestSimilarity >= q.config.Encoding.DeduplicateBlocks.MinimalSimilarity {
+			// Scale downsampled image back up to size of baseImage
+			blockImage := utils.Scale(bestBlockRGBA, q.baseImage.Bounds(), upsamplingInterpolator).(*image.RGBA)
+			return blockImage, bestBlock
+		}
+	}
+
+	// If no sufficiently similar existing block was found or deduplication is disabled
 	// Scale downsampled image back up to size of baseImage
 	blockImage := utils.Scale(downsampledImageRGBA, q.baseImage.Bounds(), upsamplingInterpolator).(*image.RGBA)
 
-	return blockImage, downsampledImage
+	// Add to global blocks
+	// Take detour over pointer pointer as not to invalidate pointers to globalBlocks in other quadtreeImages
+	newBlocks := append(**q.existingBlocks, &downsampledImage)
+	*q.existingBlocks = &newBlocks
+
+	return blockImage, &downsampledImage
 }
 
 // compareImages compares blockImage with baseImage
@@ -164,28 +207,36 @@ func (q *QuadtreeElement) compareImages() float64 {
 }
 
 // encode writes the quadtree structure to a zip file
-func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
+func (q *QuadtreeElement) encode(zipWriter *zip.Writer, imagePaths *map[*image.Image]string) (err error) {
 	// Create directory path in zip file
 	// TODO: can this be optimized?
 	path := strings.Join(strings.Split(q.id, ""), "/")
 
 	// Skip leaves that are out of bounds
-	if q.isLeaf && (!q.config.Encoding.SkipOutOfBoundsBlocks || !q.canBeSkipped) {
+	if q.isLeaf && (!q.config.Encoding.SkipOutOfBoundsBlocks.Enable || !q.canBeSkipped) {
 		// Either create and encode an image file if this is a quadtree leaf
 		fileWriter, err := zipWriter.Create(path)
 		if err != nil {
 			return err
 		}
 
-		// Encode blockImageMinimal as JPEG
-		err = jpeg.Encode(fileWriter, q.blockImageMinimal, nil)
-		if err != nil {
-			return err
+		if target, ok := (*imagePaths)[q.blockImageMinimal]; ok {
+			// Write a pseudo symlink if this exact block has already been encoded
+			fileWriter.Write([]byte(target))
+		} else {
+			// Encode image as JPEG
+			err = jpeg.Encode(fileWriter, *q.blockImageMinimal, nil)
+			if err != nil {
+				return err
+			}
+
+			// Add image path
+			(*imagePaths)[q.blockImageMinimal] = path
 		}
 	} else {
 		// Or recurse into children
 		for _, child := range q.children {
-			child.encode(zipWriter)
+			child.encode(zipWriter, imagePaths)
 		}
 	}
 
@@ -193,7 +244,7 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer) (err error) {
 }
 
 // decode reconstructs the quadtree structure from a zip file
-func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int) error {
+func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int, zipReader *zip.ReadCloser) error {
 	// If path is empty a leaf has been reached
 	if path == "" {
 		// Read image from zipFile
@@ -202,7 +253,35 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 			return err
 		}
 
-		fileImage, err := utils.ReadImageFromReader(fileReader)
+		imageBytes, err := ioutil.ReadAll(fileReader)
+		if err != nil {
+			return err
+		}
+
+		// Check filetype
+		types, err := filetype.Match(imageBytes)
+		if err != nil {
+			return err
+		}
+
+		// Pseudo symlinks have an undefined filetype
+		if types.MIME.Type == "" && types.MIME.Subtype == "" && types.MIME.Value == "" {
+			// Follow pseudo symlink
+			imagePath := string(imageBytes)
+			fileReader, err = zipReader.Open(imagePath)
+			if err != nil {
+				return err
+			}
+
+			// TODO: Does allowing multiple symlinks in a row and following them speed up encoding?
+			imageBytes, err = ioutil.ReadAll(fileReader)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Read real image
+		fileImage, err := utils.ReadImageFromBytes(imageBytes)
 		if err != nil {
 			return err
 		}
@@ -281,7 +360,7 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 
 	// Recurse into next child
 	recursePath := strings.Join(splitPath[1:], "/")
-	return q.children[childId].decode(recursePath, file, remainingHeight-1)
+	return q.children[childId].decode(recursePath, file, remainingHeight-1, zipReader)
 }
 
 // visualize returns its own blockImage if it has no children, else it returns its childrens blockImages

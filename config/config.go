@@ -15,9 +15,21 @@ type QuadtreeConfig struct {
 	UpsamplingInterpolator string `yaml:"UpsamplingInterpolator"`
 }
 
+type SkipOutOfBoundsBlocksConfig struct {
+	// Should blocks that are not visible be skipped during encoding?
+	Enable bool `yaml:"Enable"`
+}
+
+type DeduplicateBlocksConfig struct {
+	// Should similar blocks be deduplicated during encoding?
+	Enable bool `yaml:"Enable"`
+	// How similar do blocks have to be to be deduplicated
+	MinimalSimilarity float64 `yaml:"MinimalSimilarity"`
+}
+
 type EncodingConfig struct {
-	// Should blocks that are not visible be skipped during encoding
-	SkipOutOfBoundsBlocks bool `yaml:"SkipOutOfBoundsBlocks"`
+	SkipOutOfBoundsBlocks SkipOutOfBoundsBlocksConfig `yaml:"SkipOutOfBoundsBlocks"`
+	DeduplicateBlocks     DeduplicateBlocksConfig     `yaml:"DeduplicateBlocks"`
 }
 
 type VisualizationConfig struct {

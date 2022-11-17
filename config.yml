@@ -9,8 +9,14 @@ Quadtree:
 
 # Encoding Config
 Encoding:
-  # Should blocks that are not visible be skipped during encoding
-  SkipOutOfBoundsBlocks: True
+  SkipOutOfBoundsBlocks:
+    # Should blocks that are not visible be skipped during encoding
+    Enable: True
+  DeduplicateBlocks:
+    # Should similar blocks be deduplicated during encoding?
+    Enable: True
+    # How similar do blocks have to be to be deduplicated?
+    MinimalSimilarity: 0.9
 
 # Visualization Config
 Visualization:
