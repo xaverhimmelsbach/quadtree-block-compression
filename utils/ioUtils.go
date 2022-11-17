@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -20,6 +21,12 @@ func ReadImage(path string) (img image.Image, err error) {
 
 	defer file.Close()
 	return ReadImageFromReader(file)
+}
+
+// ReadImageFromBytes that a byte slice and attempts to decode it into an image
+func ReadImageFromBytes(imageBytes []byte) (img image.Image, err error) {
+	buffer := bytes.NewBuffer(imageBytes)
+	return ReadImageFromReader(buffer)
 }
 
 // ReadImageFromReader takes an io.Reader and attempts to decode it into an image
