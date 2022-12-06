@@ -207,7 +207,7 @@ func (q *QuadtreeElement) compareImages() float64 {
 }
 
 // encode writes the quadtree structure to a zip file
-func (q *QuadtreeElement) encode(zipWriter *zip.Writer, imagePaths *map[*image.Image]string) (err error) {
+func (q *QuadtreeElement) encode(archiveWriter *ArchiveWriter, imagePaths *map[*image.Image]string) (err error) {
 	// Create directory path in zip file
 	// TODO: can this be optimized?
 	path := strings.Join(strings.Split(q.id, ""), "/")
@@ -215,7 +215,7 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer, imagePaths *map[*image.I
 	// Skip leaves that are out of bounds
 	if q.isLeaf && (!q.config.Encoding.SkipOutOfBoundsBlocks.Enable || !q.canBeSkipped) {
 		// Either create and encode an image file if this is a quadtree leaf
-		fileWriter, err := zipWriter.Create(path)
+		fileWriter, err := archiveWriter.CreateFile(path)
 		if err != nil {
 			return err
 		}
@@ -236,7 +236,7 @@ func (q *QuadtreeElement) encode(zipWriter *zip.Writer, imagePaths *map[*image.I
 	} else {
 		// Or recurse into children
 		for _, child := range q.children {
-			child.encode(zipWriter, imagePaths)
+			child.encode(archiveWriter, imagePaths)
 		}
 	}
 

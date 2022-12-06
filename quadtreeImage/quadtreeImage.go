@@ -60,21 +60,25 @@ func (q *QuadtreeImage) Partition() {
 }
 
 // Encode encodes a quadtree image into a single buffer and returns it
-func (q *QuadtreeImage) Encode() (io.Reader, error) {
+func (q *QuadtreeImage) Encode(archiveMode ArchiveWriterMode) (io.Reader, error) {
 	buffer := new(bytes.Buffer)
-	zipWriter := zip.NewWriter(buffer)
 
-	// Keep map of encoded blocks and their path in the zip for deduplication
-	encodedBlockPaths := make(map[*image.Image]string)
-
-	// TODO: What happens if the first child can already encode the whole picture (e.g. solid color)?
-	// Encode the tree root, which recurses further down the quadtree if needed
-	err := q.root.encode(zipWriter, &encodedBlockPaths)
+	archiveWriter, err := NewArchiveWriter(archiveMode, buffer)
 	if err != nil {
 		return buffer, err
 	}
 
-	fileWriter, err := zipWriter.Create(MetaFile)
+	// Keep map of encoded blocks and their path in the archive for deduplication
+	encodedBlockPaths := make(map[*image.Image]string)
+
+	// TODO: What happens if the first child can already encode the whole picture (e.g. solid color)?
+	// Encode the tree root, which recurses further down the quadtree if needed
+	err = q.root.encode(archiveWriter, &encodedBlockPaths)
+	if err != nil {
+		return buffer, err
+	}
+
+	fileWriter, err := archiveWriter.CreateFile(MetaFile)
 	if err != nil {
 		return buffer, err
 	}
@@ -92,8 +96,8 @@ func (q *QuadtreeImage) Encode() (io.Reader, error) {
 		strconv.Itoa(width) + "\n" +
 		strconv.Itoa(height)))
 
-	// Close zipWriter explicitly to flush all files to buffer
-	zipWriter.Close()
+	// Close archiveWriter explicitly to flush all files to buffer
+	archiveWriter.Close()
 	return buffer, err
 }
 
