@@ -151,14 +151,8 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		baseImage: qti.paddedImage,
 	}
 
-	// Get all files from archive
-	files, err := archiveReader.Files()
-	if err != nil {
-		return nil, err
-	}
-
 	// Iterate over archive contents and decode them
-	for filename, fileContents := range files {
+	for filename, fileContents := range archiveReader.Files() {
 		// Skip metadata file
 		if filename == MetaFile {
 			continue

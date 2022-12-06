@@ -42,10 +42,10 @@ type ArchiveReader struct {
 	gzipReader *gzip.Reader
 	// Only in use with gzip compression.
 	tarReader *tar.Reader
-	// Only in use with gzip compression. Holds the files contained in the archive.
-	tarCache map[string]io.Reader
 	// Only in use with zip compression.
 	zipReader *zip.ReadCloser
+	// Caches all the files contained in the archive.
+	fileCache map[string]io.Reader
 }
 
 // NewArchiveWriter creates a new archive writer for the archive type mode and configures it to write to writer.
@@ -160,7 +160,7 @@ func OpenArchiveReader(name string) (*ArchiveReader, error) {
 
 		// Create tar reader and cache archive files
 		archiveReader.tarReader = tar.NewReader(archiveReader.gzipReader)
-		archiveReader.populateTarCache()
+		archiveReader.populateFileCacheGzip()
 	case ArchiveModeZip:
 		archiveReader.mode = ArchiveModeZip
 		// TODO: Unneccessary read
@@ -168,6 +168,9 @@ func OpenArchiveReader(name string) (*ArchiveReader, error) {
 		if err != nil {
 			return archiveReader, err
 		}
+
+		// Cache archive files
+		archiveReader.populateFileCacheZip()
 	default:
 		return archiveReader, fmt.Errorf("no corresponding switch case found for archive type %s", filetype.MIME.Subtype)
 	}
@@ -179,7 +182,7 @@ func OpenArchiveReader(name string) (*ArchiveReader, error) {
 func (r *ArchiveReader) Open(name string) (io.Reader, error) {
 	switch r.mode {
 	case ArchiveModeGzip:
-		fileContents, ok := r.tarCache[name]
+		fileContents, ok := r.fileCache[name]
 		if !ok {
 			// TODO: Is it ok to return a fs error here?
 			return nil, fs.ErrNotExist
@@ -194,33 +197,14 @@ func (r *ArchiveReader) Open(name string) (io.Reader, error) {
 }
 
 // File returns the list of files contained in the archive.
-func (r *ArchiveReader) Files() (map[string]io.Reader, error) {
-	switch r.mode {
-	case ArchiveModeGzip:
-		return r.tarCache, nil
-	case ArchiveModeZip:
-		zipFiles := make(map[string]io.Reader)
-
-		for _, file := range r.zipReader.File {
-			fileReader, err := file.Open()
-			if err != nil {
-				return nil, err
-			}
-
-			zipFiles[file.Name] = fileReader
-		}
-
-		return zipFiles, nil
-	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", r.mode)
-	}
+func (r *ArchiveReader) Files() map[string]io.Reader {
+	return r.fileCache
 }
 
-// populateTarCache populates the tarCache with all files contained in a tar.gz archive.
-func (r *ArchiveReader) populateTarCache() error {
-
+// populateFileCacheGzip populates the fileCache with all files contained in a tar.gz archive.
+func (r *ArchiveReader) populateFileCacheGzip() error {
 	// Init cache
-	r.tarCache = make(map[string]io.Reader)
+	r.fileCache = make(map[string]io.Reader)
 
 	for {
 		header, err := r.tarReader.Next()
@@ -243,7 +227,24 @@ func (r *ArchiveReader) populateTarCache() error {
 		buffer := bytes.NewBuffer(fileContents)
 
 		// Add to cache
-		r.tarCache[filename] = buffer
+		r.fileCache[filename] = buffer
+	}
+
+	return nil
+}
+
+// populateFileCacheZip populates the fileCache with all files contained in a zip archive.
+func (r *ArchiveReader) populateFileCacheZip() error {
+	// Init cache
+	r.fileCache = make(map[string]io.Reader)
+
+	for _, file := range r.zipReader.File {
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		r.fileCache[file.Name] = fileReader
 	}
 
 	return nil
