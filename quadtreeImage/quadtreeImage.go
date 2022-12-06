@@ -1,7 +1,6 @@
 package quadtreeImage
 
 import (
-	"archive/zip"
 	"bytes"
 	"fmt"
 	"image"
@@ -60,7 +59,7 @@ func (q *QuadtreeImage) Partition() {
 }
 
 // Encode encodes a quadtree image into a single buffer and returns it
-func (q *QuadtreeImage) Encode(archiveMode ArchiveWriterMode) (io.Reader, error) {
+func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, error) {
 	buffer := new(bytes.Buffer)
 
 	archiveWriter, err := NewArchiveWriter(archiveMode, buffer)
@@ -103,12 +102,12 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveWriterMode) (io.Reader, error)
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it
 func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*QuadtreeImage, error) {
-	zipReader, err := zip.OpenReader(quadtreePath)
+	archiveReader, err := OpenArchiveReader(quadtreePath)
 	if err != nil {
 		return nil, err
 	}
 
-	metaFile, err := zipReader.Open(MetaFile)
+	metaFile, err := archiveReader.Open(MetaFile)
 	if err != nil {
 		return nil, err
 	}
@@ -151,15 +150,20 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		baseImage: qti.paddedImage,
 	}
 
-	// Iterate over zips contents and decode them
-	for _, file := range zipReader.File {
+	files, err := archiveReader.File()
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate over archive contents and decode them
+	for _, file := range files {
 		// Skip metadata
 		if file.Name == MetaFile {
 			continue
 		}
 
 		// Decode file into quadtree
-		err = qti.root.decode(file.Name, file, treeHeight, zipReader)
+		err = qti.root.decode(file.Name, file, treeHeight, archiveReader)
 		if err != nil {
 			return qti, err
 		}

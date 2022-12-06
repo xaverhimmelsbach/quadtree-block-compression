@@ -244,7 +244,7 @@ func (q *QuadtreeElement) encode(archiveWriter *ArchiveWriter, imagePaths *map[*
 }
 
 // decode reconstructs the quadtree structure from a zip file
-func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int, zipReader *zip.ReadCloser) error {
+func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int, archiveReader *ArchiveReader) error {
 	// If path is empty a leaf has been reached
 	if path == "" {
 		// Read image from zipFile
@@ -268,7 +268,7 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 		if types.MIME.Type == "" && types.MIME.Subtype == "" && types.MIME.Value == "" {
 			// Follow pseudo symlink
 			imagePath := string(imageBytes)
-			fileReader, err = zipReader.Open(imagePath)
+			fileReader, err = archiveReader.Open(imagePath)
 			if err != nil {
 				return err
 			}
@@ -360,7 +360,7 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 
 	// Recurse into next child
 	recursePath := strings.Join(splitPath[1:], "/")
-	return q.children[childId].decode(recursePath, file, remainingHeight-1, zipReader)
+	return q.children[childId].decode(recursePath, file, remainingHeight-1, archiveReader)
 }
 
 // visualize returns its own blockImage if it has no children, else it returns its childrens blockImages
