@@ -12,6 +12,8 @@
       in
       {
         devShell = pkgs.mkShell {
+          # Prevent gcc failing on compile
+          hardeningDisable = [ "fortify" ];
           buildInputs = with pkgs;[
             go
             gotools
