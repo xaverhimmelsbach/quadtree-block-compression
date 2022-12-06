@@ -12,11 +12,11 @@ import (
 	"github.com/h2non/filetype"
 )
 
-type ArchiveMode int
+type ArchiveMode string
 
 const (
-	ArchiveModeTar ArchiveMode = iota
-	ArchiveModeZip
+	ArchiveModeTar ArchiveMode = "tar"
+	ArchiveModeZip ArchiveMode = "zip"
 )
 
 type ArchiveWriter struct {
@@ -42,7 +42,7 @@ func NewArchiveWriter(mode ArchiveMode, writer io.Writer) (*ArchiveWriter, error
 	case ArchiveModeZip:
 		archiveWriter.zipWriter = zip.NewWriter(writer)
 	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %d", mode)
+		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", mode)
 	}
 
 	return archiveWriter, nil
@@ -56,7 +56,7 @@ func (w *ArchiveWriter) CreateFile(name string) (io.Writer, error) {
 	case ArchiveModeZip:
 		return w.zipWriter.Create(name)
 	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %d", w.mode)
+		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", w.mode)
 	}
 }
 
@@ -69,7 +69,7 @@ func (w *ArchiveWriter) Close() error {
 		w.zipWriter.Close()
 		return nil
 	default:
-		return fmt.Errorf("no corresponding switch case found for archive mode %d", w.mode)
+		return fmt.Errorf("no corresponding switch case found for archive mode %s", w.mode)
 	}
 }
 
@@ -120,7 +120,7 @@ func (r *ArchiveReader) Open(name string) (fs.File, error) {
 	case ArchiveModeZip:
 		return r.zipReader.Open(name)
 	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %d", r.mode)
+		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", r.mode)
 	}
 }
 
@@ -132,6 +132,6 @@ func (r *ArchiveReader) File() ([]*zip.File, error) {
 	case ArchiveModeZip:
 		return r.zipReader.File, nil
 	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %d", r.mode)
+		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", r.mode)
 	}
 }

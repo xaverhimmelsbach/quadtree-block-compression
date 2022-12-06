@@ -47,7 +47,7 @@ func main() {
 		quadtreeRoot.Partition()
 
 		// Encode quadtree structure
-		encoded, err := quadtreeRoot.Encode(quadtreeImage.ArchiveModeZip)
+		encoded, err := quadtreeRoot.Encode(quadtreeImage.ArchiveMode(cfg.Encoding.ArchiveFormat))
 		if err != nil {
 			panic(err)
 		}

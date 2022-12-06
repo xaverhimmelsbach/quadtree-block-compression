@@ -9,6 +9,8 @@ Quadtree:
 
 # Encoding Config
 Encoding:
+  # Underlying archive format of the encoded file
+  ArchiveFormat: "zip"
   SkipOutOfBoundsBlocks:
     # Should blocks that are not visible be skipped during encoding
     Enable: True
