@@ -3,6 +3,9 @@ package quadtreeImage
 import (
 	"archive/tar"
 	"archive/zip"
+	"bytes"
+	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -15,19 +18,33 @@ import (
 type ArchiveMode string
 
 const (
-	ArchiveModeTar ArchiveMode = "tar"
-	ArchiveModeZip ArchiveMode = "zip"
+	ArchiveModeGzip ArchiveMode = "gzip"
+	ArchiveModeZip  ArchiveMode = "zip"
 )
 
+// ArchiveWriter is an abstraction that allows writing several different compression algorithms.
 type ArchiveWriter struct {
-	mode      ArchiveMode
+	// Compression algorithm in use for this ArchiveWriter.
+	mode ArchiveMode
+	// Only in use with gzip compression.
+	gzipWriter *gzip.Writer
+	// Only in use with gzip compression.
 	tarWriter *tar.Writer
+	// Only in use with zip compression.
 	zipWriter *zip.Writer
 }
 
+// ArchiveReader is an abstraction that allows reading several different compression algorithms.
 type ArchiveReader struct {
-	mode      ArchiveMode
+	// Compression algorithm in use for this ArchiveReader.
+	mode ArchiveMode
+	// Only in use with gzip compression.
+	gzipReader *gzip.Reader
+	// Only in use with gzip compression.
 	tarReader *tar.Reader
+	// Only in use with gzip compression. Holds the files contained in the archive.
+	tarCache map[string]io.Reader
+	// Only in use with zip compression.
 	zipReader *zip.ReadCloser
 }
 
@@ -37,8 +54,10 @@ func NewArchiveWriter(mode ArchiveMode, writer io.Writer) (*ArchiveWriter, error
 
 	archiveWriter.mode = mode
 	switch mode {
-	case ArchiveModeTar:
-		archiveWriter.tarWriter = tar.NewWriter(writer)
+	case ArchiveModeGzip:
+		archiveWriter.gzipWriter = gzip.NewWriter(writer)
+		// Chain gzipWriter with tarWriter
+		archiveWriter.tarWriter = tar.NewWriter(archiveWriter.gzipWriter)
 	case ArchiveModeZip:
 		archiveWriter.zipWriter = zip.NewWriter(writer)
 	default:
@@ -48,29 +67,64 @@ func NewArchiveWriter(mode ArchiveMode, writer io.Writer) (*ArchiveWriter, error
 	return archiveWriter, nil
 }
 
-// CreateFile adds a file to the underlying archive using the provided name and returns a writer to it.
-func (w *ArchiveWriter) CreateFile(name string) (io.Writer, error) {
+// WriteFile adds a file to the underlying archive and writes the contents of reader to it.
+func (w *ArchiveWriter) WriteFile(name string, reader io.Reader) error {
 	switch w.mode {
-	case ArchiveModeTar:
-		return nil, fmt.Errorf("not implemented")
-	case ArchiveModeZip:
-		return w.zipWriter.Create(name)
-	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", w.mode)
-	}
-}
+	case ArchiveModeGzip:
+		fileContents, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return err
+		}
 
-// Close finishes writing the underlying archive.
-func (w *ArchiveWriter) Close() error {
-	switch w.mode {
-	case ArchiveModeTar:
-		return fmt.Errorf("not implemented")
-	case ArchiveModeZip:
-		w.zipWriter.Close()
+		// Create bare-bones file header
+		header := new(tar.Header)
+		// Always assume a regular file (for now)
+		header.Typeflag = tar.TypeReg
+		header.Name = name
+		header.Size = int64(len(fileContents))
+		header.Mode = 544
+
+		err = w.tarWriter.WriteHeader(header)
+		if err != nil {
+			return err
+		}
+
+		_, err = w.tarWriter.Write(fileContents)
+		if err != nil {
+			return err
+		}
+
 		return nil
+	case ArchiveModeZip:
+		writer, err := w.zipWriter.Create(name)
+		if err != nil {
+			return err
+		}
+
+		fileContents, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return err
+		}
+		writer.Write(fileContents)
 	default:
 		return fmt.Errorf("no corresponding switch case found for archive mode %s", w.mode)
 	}
+
+	return nil
+}
+
+// Close flushes the underlying archive to its writer.
+func (w *ArchiveWriter) Close() error {
+	switch w.mode {
+	case ArchiveModeGzip:
+		w.tarWriter.Close()
+		w.gzipWriter.Close()
+	case ArchiveModeZip:
+		w.zipWriter.Close()
+	default:
+		return fmt.Errorf("no corresponding switch case found for archive mode %s", w.mode)
+	}
+	return nil
 }
 
 // OpenArchiveReader will open the archive file specified by name and return a reader.
@@ -94,13 +148,22 @@ func OpenArchiveReader(name string) (*ArchiveReader, error) {
 
 	archiveReader := new(ArchiveReader)
 
-	switch filetype.MIME.Subtype {
-	case "tar":
-		archiveReader.mode = ArchiveModeTar
-		archiveReader.tarReader = tar.NewReader(archiveFile)
-		return archiveReader, fmt.Errorf("not implemented")
-	case "zip":
+	switch ArchiveMode(filetype.MIME.Subtype) {
+	case ArchiveModeGzip:
+		archiveReader.mode = ArchiveModeGzip
+		// Load archiveContents into buffer to reread data from the beginning
+		archiveBuffer := bytes.NewBuffer(archiveContents)
+		archiveReader.gzipReader, err = gzip.NewReader(archiveBuffer)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return archiveReader, err
+		}
+
+		// Create tar reader and cache archive files
+		archiveReader.tarReader = tar.NewReader(archiveReader.gzipReader)
+		archiveReader.populateTarCache()
+	case ArchiveModeZip:
 		archiveReader.mode = ArchiveModeZip
+		// TODO: Unneccessary read
 		archiveReader.zipReader, err = zip.OpenReader(name)
 		if err != nil {
 			return archiveReader, err
@@ -112,11 +175,17 @@ func OpenArchiveReader(name string) (*ArchiveReader, error) {
 	return archiveReader, nil
 }
 
-// Open opens the named file in the archive.
-func (r *ArchiveReader) Open(name string) (fs.File, error) {
+// Open opens the named file in the archive and returns a reader to it.
+func (r *ArchiveReader) Open(name string) (io.Reader, error) {
 	switch r.mode {
-	case ArchiveModeTar:
-		return nil, fmt.Errorf("not implemented")
+	case ArchiveModeGzip:
+		fileContents, ok := r.tarCache[name]
+		if !ok {
+			// TODO: Is it ok to return a fs error here?
+			return nil, fs.ErrNotExist
+		}
+
+		return fileContents, nil
 	case ArchiveModeZip:
 		return r.zipReader.Open(name)
 	default:
@@ -125,13 +194,57 @@ func (r *ArchiveReader) Open(name string) (fs.File, error) {
 }
 
 // File returns the list of files contained in the archive.
-func (r *ArchiveReader) File() ([]*zip.File, error) {
+func (r *ArchiveReader) Files() (map[string]io.Reader, error) {
 	switch r.mode {
-	case ArchiveModeTar:
-		return nil, fmt.Errorf("not implemented")
+	case ArchiveModeGzip:
+		return r.tarCache, nil
 	case ArchiveModeZip:
-		return r.zipReader.File, nil
+		zipFiles := make(map[string]io.Reader)
+
+		for _, file := range r.zipReader.File {
+			fileReader, err := file.Open()
+			if err != nil {
+				return nil, err
+			}
+
+			zipFiles[file.Name] = fileReader
+		}
+
+		return zipFiles, nil
 	default:
 		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", r.mode)
 	}
+}
+
+// populateTarCache populates the tarCache with all files contained in a tar.gz archive.
+func (r *ArchiveReader) populateTarCache() error {
+
+	// Init cache
+	r.tarCache = make(map[string]io.Reader)
+
+	for {
+		header, err := r.tarReader.Next()
+
+		if errors.Is(err, io.EOF) {
+			// Last file read
+			break
+		} else if err != nil {
+			return err
+		}
+
+		filename := header.Name
+
+		// Read file contents
+		fileContents, err := ioutil.ReadAll(r.tarReader)
+		if err != nil {
+			return err
+		}
+
+		buffer := bytes.NewBuffer(fileContents)
+
+		// Add to cache
+		r.tarCache[filename] = buffer
+	}
+
+	return nil
 }

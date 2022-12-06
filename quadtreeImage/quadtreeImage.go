@@ -60,11 +60,11 @@ func (q *QuadtreeImage) Partition() {
 
 // Encode encodes a quadtree image into a single buffer and returns it
 func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, error) {
-	buffer := new(bytes.Buffer)
+	fileBuffer := new(bytes.Buffer)
 
-	archiveWriter, err := NewArchiveWriter(archiveMode, buffer)
+	archiveWriter, err := NewArchiveWriter(archiveMode, fileBuffer)
 	if err != nil {
-		return buffer, err
+		return fileBuffer, err
 	}
 
 	// Keep map of encoded blocks and their path in the archive for deduplication
@@ -74,30 +74,31 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, error) {
 	// Encode the tree root, which recurses further down the quadtree if needed
 	err = q.root.encode(archiveWriter, &encodedBlockPaths)
 	if err != nil {
-		return buffer, err
-	}
-
-	fileWriter, err := archiveWriter.CreateFile(MetaFile)
-	if err != nil {
-		return buffer, err
+		return fileBuffer, err
 	}
 
 	treeHeight, err := q.getHeight()
 	if err != nil {
-		return buffer, err
+		return fileBuffer, err
 	}
 
 	width := q.baseImage.Bounds().Dx()
 	height := q.baseImage.Bounds().Dy()
 
 	// Write metadata
-	fileWriter.Write([]byte(strconv.Itoa(treeHeight) + "\n" +
+	metaBuffer := new(bytes.Buffer)
+	metaBuffer.Write([]byte(strconv.Itoa(treeHeight) + "\n" +
 		strconv.Itoa(width) + "\n" +
 		strconv.Itoa(height)))
 
+	err = archiveWriter.WriteFile(MetaFile, metaBuffer)
+	if err != nil {
+		return fileBuffer, err
+	}
+
 	// Close archiveWriter explicitly to flush all files to buffer
-	archiveWriter.Close()
-	return buffer, err
+	err = archiveWriter.Close()
+	return fileBuffer, err
 }
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it
@@ -107,6 +108,7 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		return nil, err
 	}
 
+	// Parse metadata
 	metaFile, err := archiveReader.Open(MetaFile)
 	if err != nil {
 		return nil, err
@@ -117,7 +119,6 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		return nil, err
 	}
 
-	// Parse metadata
 	meta := strings.Split(string(metaBytes), "\n")
 	if len(meta) != 3 {
 		return nil, fmt.Errorf("meta file contained %d newline-seperated values instead of three", len(meta))
@@ -150,20 +151,21 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		baseImage: qti.paddedImage,
 	}
 
-	files, err := archiveReader.File()
+	// Get all files from archive
+	files, err := archiveReader.Files()
 	if err != nil {
 		return nil, err
 	}
 
 	// Iterate over archive contents and decode them
-	for _, file := range files {
-		// Skip metadata
-		if file.Name == MetaFile {
+	for filename, fileContents := range files {
+		// Skip metadata file
+		if filename == MetaFile {
 			continue
 		}
 
 		// Decode file into quadtree
-		err = qti.root.decode(file.Name, file, treeHeight, archiveReader)
+		err = qti.root.decode(filename, fileContents, treeHeight, archiveReader)
 		if err != nil {
 			return qti, err
 		}

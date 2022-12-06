@@ -1,11 +1,12 @@
 package quadtreeImage
 
 import (
-	"archive/zip"
+	"bytes"
 	"fmt"
 	"image"
 	"image/draw"
 	"image/jpeg"
+	"io"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -206,26 +207,24 @@ func (q *QuadtreeElement) compareImages() float64 {
 	return similarity
 }
 
-// encode writes the quadtree structure to a zip file
+// encode writes the quadtree structure to an archive
 func (q *QuadtreeElement) encode(archiveWriter *ArchiveWriter, imagePaths *map[*image.Image]string) (err error) {
 	// Create directory path in zip file
 	// TODO: can this be optimized?
 	path := strings.Join(strings.Split(q.id, ""), "/")
 
 	// Skip leaves that are out of bounds
+	// Either create and encode an image file if this is a quadtree leaf
 	if q.isLeaf && (!q.config.Encoding.SkipOutOfBoundsBlocks.Enable || !q.canBeSkipped) {
-		// Either create and encode an image file if this is a quadtree leaf
-		fileWriter, err := archiveWriter.CreateFile(path)
-		if err != nil {
-			return err
-		}
+		// Create temporary buffer that gets passed into archiveWriter later on
+		tempBuffer := new(bytes.Buffer)
 
 		if target, ok := (*imagePaths)[q.blockImageMinimal]; ok {
 			// Write a pseudo symlink if this exact block has already been encoded
-			fileWriter.Write([]byte(target))
+			tempBuffer.Write([]byte(target))
 		} else {
 			// Encode image as JPEG
-			err = jpeg.Encode(fileWriter, *q.blockImageMinimal, nil)
+			err = jpeg.Encode(tempBuffer, *q.blockImageMinimal, nil)
 			if err != nil {
 				return err
 			}
@@ -233,8 +232,14 @@ func (q *QuadtreeElement) encode(archiveWriter *ArchiveWriter, imagePaths *map[*
 			// Add image path
 			(*imagePaths)[q.blockImageMinimal] = path
 		}
-	} else {
+
+		// Write temporary buffer to archive
+		err = archiveWriter.WriteFile(path, tempBuffer)
+		if err != nil {
+			return err
+		}
 		// Or recurse into children
+	} else {
 		for _, child := range q.children {
 			child.encode(archiveWriter, imagePaths)
 		}
@@ -243,17 +248,11 @@ func (q *QuadtreeElement) encode(archiveWriter *ArchiveWriter, imagePaths *map[*
 	return nil
 }
 
-// decode reconstructs the quadtree structure from a zip file
-func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight int, archiveReader *ArchiveReader) error {
+// decode reconstructs the quadtree structure from an archive
+func (q *QuadtreeElement) decode(path string, fileContents io.Reader, remainingHeight int, archiveReader *ArchiveReader) error {
 	// If path is empty a leaf has been reached
 	if path == "" {
-		// Read image from zipFile
-		fileReader, err := file.Open()
-		if err != nil {
-			return err
-		}
-
-		imageBytes, err := ioutil.ReadAll(fileReader)
+		imageBytes, err := ioutil.ReadAll(fileContents)
 		if err != nil {
 			return err
 		}
@@ -268,13 +267,13 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 		if types.MIME.Type == "" && types.MIME.Subtype == "" && types.MIME.Value == "" {
 			// Follow pseudo symlink
 			imagePath := string(imageBytes)
-			fileReader, err = archiveReader.Open(imagePath)
+			linkedFileReader, err := archiveReader.Open(imagePath)
 			if err != nil {
 				return err
 			}
 
 			// TODO: Does allowing multiple symlinks in a row and following them speed up encoding?
-			imageBytes, err = ioutil.ReadAll(fileReader)
+			imageBytes, err = ioutil.ReadAll(linkedFileReader)
 			if err != nil {
 				return err
 			}
@@ -360,7 +359,7 @@ func (q *QuadtreeElement) decode(path string, file *zip.File, remainingHeight in
 
 	// Recurse into next child
 	recursePath := strings.Join(splitPath[1:], "/")
-	return q.children[childId].decode(recursePath, file, remainingHeight-1, archiveReader)
+	return q.children[childId].decode(recursePath, fileContents, remainingHeight-1, archiveReader)
 }
 
 // visualize returns its own blockImage if it has no children, else it returns its childrens blockImages
