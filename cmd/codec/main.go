@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 
 	"github.com/h2non/filetype"
-	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
-	"github.com/xaverhimmelsbach/quadtree-block-compression/quadtreeImage"
-	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/quadtreeImage"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 )
 
 func main() {

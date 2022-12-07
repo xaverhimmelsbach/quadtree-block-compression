@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/h2non/filetype"
-	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
-	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 	drawX "golang.org/x/image/draw"
 )
 

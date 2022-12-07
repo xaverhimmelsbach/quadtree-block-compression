@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xaverhimmelsbach/quadtree-block-compression/config"
-	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 )
 
 // QuadtreeImage holds and manages a quadtree image
