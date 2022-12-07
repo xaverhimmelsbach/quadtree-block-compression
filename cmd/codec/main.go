@@ -91,12 +91,11 @@ func main() {
 
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
-		quadtreeRoot, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
+		decodedImage, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
 		if err != nil {
 			panic(err)
 		}
 
-		decodedImage := quadtreeRoot.GetBlockImage(false)
 		utils.WriteImageToFile(decodedImage, *outputPath)
 		fmt.Printf("Decoded %s and wrote it to %s", *inputPath, *outputPath)
 	default:

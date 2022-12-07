@@ -125,7 +125,7 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 }
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it
-func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*QuadtreeImage, error) {
+func Decode(quadtreePath string, outputPath string, cfg *config.Config) (image.Image, error) {
 	archiveReader, err := OpenArchiveReader(quadtreePath)
 	if err != nil {
 		return nil, err
@@ -179,11 +179,11 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 		// Decode file into quadtree
 		err = qti.root.decode(filename, fileContents, treeHeight, archiveReader)
 		if err != nil {
-			return qti, err
+			return nil, err
 		}
 	}
 
-	return qti, nil
+	return qti.GetBlockImage(false), nil
 }
 
 // GetBlockImage creates a representation of the image encoded in the quadtree.
