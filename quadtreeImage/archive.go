@@ -45,7 +45,7 @@ type ArchiveReader struct {
 	// Only in use with zip compression.
 	zipReader *zip.ReadCloser
 	// Caches all the files contained in the archive.
-	fileCache map[string]io.Reader
+	fileCache map[string]*[]byte
 }
 
 // NewArchiveWriter creates a new archive writer for the archive type mode and configures it to write to writer.
@@ -179,32 +179,25 @@ func OpenArchiveReader(name string) (*ArchiveReader, error) {
 }
 
 // Open opens the named file in the archive and returns a reader to it.
-func (r *ArchiveReader) Open(name string) (io.Reader, error) {
-	switch r.mode {
-	case ArchiveModeGzip:
-		fileContents, ok := r.fileCache[name]
-		if !ok {
-			// TODO: Is it ok to return a fs error here?
-			return nil, fs.ErrNotExist
-		}
-
-		return fileContents, nil
-	case ArchiveModeZip:
-		return r.zipReader.Open(name)
-	default:
-		return nil, fmt.Errorf("no corresponding switch case found for archive mode %s", r.mode)
+func (r *ArchiveReader) Open(name string) (*[]byte, error) {
+	fileContents, ok := r.fileCache[name]
+	if !ok {
+		// TODO: Is it ok to return a fs error here?
+		return nil, fs.ErrNotExist
 	}
+
+	return fileContents, nil
 }
 
 // File returns the list of files contained in the archive.
-func (r *ArchiveReader) Files() map[string]io.Reader {
+func (r *ArchiveReader) Files() map[string]*[]byte {
 	return r.fileCache
 }
 
 // populateFileCacheGzip populates the fileCache with all files contained in a tar.gz archive.
 func (r *ArchiveReader) populateFileCacheGzip() error {
 	// Init cache
-	r.fileCache = make(map[string]io.Reader)
+	r.fileCache = make(map[string]*[]byte)
 
 	for {
 		header, err := r.tarReader.Next()
@@ -224,10 +217,8 @@ func (r *ArchiveReader) populateFileCacheGzip() error {
 			return err
 		}
 
-		buffer := bytes.NewBuffer(fileContents)
-
 		// Add to cache
-		r.fileCache[filename] = buffer
+		r.fileCache[filename] = &fileContents
 	}
 
 	return nil
@@ -236,7 +227,7 @@ func (r *ArchiveReader) populateFileCacheGzip() error {
 // populateFileCacheZip populates the fileCache with all files contained in a zip archive.
 func (r *ArchiveReader) populateFileCacheZip() error {
 	// Init cache
-	r.fileCache = make(map[string]io.Reader)
+	r.fileCache = make(map[string]*[]byte)
 
 	for _, file := range r.zipReader.File {
 		fileReader, err := file.Open()
@@ -244,7 +235,13 @@ func (r *ArchiveReader) populateFileCacheZip() error {
 			return err
 		}
 
-		r.fileCache[file.Name] = fileReader
+		// Read file contents
+		fileContents, err := ioutil.ReadAll(fileReader)
+		if err != nil {
+			return err
+		}
+
+		r.fileCache[file.Name] = &fileContents
 	}
 
 	return nil

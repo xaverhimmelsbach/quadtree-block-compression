@@ -6,8 +6,6 @@ import (
 	"image"
 	"image/draw"
 	"image/jpeg"
-	"io"
-	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -249,13 +247,10 @@ func (q *QuadtreeElement) encode(archiveWriter *ArchiveWriter, imagePaths *map[*
 }
 
 // decode reconstructs the quadtree structure from an archive
-func (q *QuadtreeElement) decode(path string, fileContents io.Reader, remainingHeight int, archiveReader *ArchiveReader) error {
+func (q *QuadtreeElement) decode(path string, fileContents *[]byte, remainingHeight int, archiveReader *ArchiveReader) error {
 	// If path is empty a leaf has been reached
 	if path == "" {
-		imageBytes, err := ioutil.ReadAll(fileContents)
-		if err != nil {
-			return err
-		}
+		imageBytes := *fileContents
 
 		// Check filetype
 		types, err := filetype.Match(imageBytes)
@@ -267,16 +262,13 @@ func (q *QuadtreeElement) decode(path string, fileContents io.Reader, remainingH
 		if types.MIME.Type == "" && types.MIME.Subtype == "" && types.MIME.Value == "" {
 			// Follow pseudo symlink
 			imagePath := string(imageBytes)
-			linkedFileReader, err := archiveReader.Open(imagePath)
-			if err != nil {
-				return err
-			}
 
-			// TODO: Does allowing multiple symlinks in a row and following them speed up encoding?
-			imageBytes, err = ioutil.ReadAll(linkedFileReader)
+			// TODO: Would allowing multiple symlinks in a row and following them speed up encoding?
+			imageBytesPointer, err := archiveReader.Open(imagePath)
 			if err != nil {
 				return err
 			}
+			imageBytes = *imageBytesPointer
 		}
 
 		// Read real image

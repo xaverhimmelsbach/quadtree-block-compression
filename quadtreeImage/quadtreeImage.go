@@ -7,7 +7,6 @@ import (
 	"image/color"
 	"image/draw"
 	"io"
-	"io/ioutil"
 	"math"
 	"strconv"
 	"strings"
@@ -109,17 +108,12 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (*Quadtr
 	}
 
 	// Parse metadata
-	metaFile, err := archiveReader.Open(MetaFile)
+	metaBytes, err := archiveReader.Open(MetaFile)
 	if err != nil {
 		return nil, err
 	}
 
-	metaBytes, err := ioutil.ReadAll(metaFile)
-	if err != nil {
-		return nil, err
-	}
-
-	meta := strings.Split(string(metaBytes), "\n")
+	meta := strings.Split(string(*metaBytes), "\n")
 	if len(meta) != 3 {
 		return nil, fmt.Errorf("meta file contained %d newline-seperated values instead of three", len(meta))
 	}
