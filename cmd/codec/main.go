@@ -66,10 +66,10 @@ func main() {
 			blockVisualization := quadtreeRoot.GetBlockImage(false)
 			blockVisualizationPadded := quadtreeRoot.GetBlockImage(true)
 
-			utils.WriteImage("boxVisualization.png", boxVisualization)
-			utils.WriteImage("boxVisualizationPadded.png", boxVisualizationPadded)
-			utils.WriteImage("blockVisualization.jpg", blockVisualization)
-			utils.WriteImage("blockVisualizationPadded.jpg", blockVisualizationPadded)
+			utils.WriteImageToFile(boxVisualization, "boxVisualization.png")
+			utils.WriteImageToFile(boxVisualizationPadded, "boxVisualizationPadded.png")
+			utils.WriteImageToFile(blockVisualization, "blockVisualization.jpg")
+			utils.WriteImageToFile(blockVisualizationPadded, "blockVisualizationPadded.jpg")
 		}
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
@@ -79,7 +79,7 @@ func main() {
 		}
 
 		decodedImage := quadtreeRoot.GetBlockImage(false)
-		utils.WriteImage(*outputPath, decodedImage)
+		utils.WriteImageToFile(decodedImage, *outputPath)
 		fmt.Printf("Decoded %s and wrote it to %s", *inputPath, *outputPath)
 	default:
 		panic("filetype is neither image nor archive")

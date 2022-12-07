@@ -35,28 +35,34 @@ func ReadImageFromReader(reader io.Reader) (img image.Image, err error) {
 	return img, err
 }
 
-// WriteImage encodes an image as either PNG or JPEG according to the file extension and writes it to the provided path
-func WriteImage(filePath string, img image.Image) error {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	extension := path.Ext(filePath)
+// WriteImage encodes an image as either PNG or JPEG according to extension and writes it to writer.
+// Note: extension needs to be prepended with a dot.
+func WriteImage(img image.Image, writer io.Writer, extension string) (err error) {
 	switch extension {
 	case ".jpg":
 		fallthrough
 	case ".jpeg":
-		err = jpeg.Encode(file, img, nil)
+		err = jpeg.Encode(writer, img, nil)
 	case ".png":
-		err = png.Encode(file, img)
+		err = png.Encode(writer, img)
 	default:
 		err = fmt.Errorf("unknown file extension: %q", extension)
 	}
 
 	return err
+}
+
+// WriteImageToFile encodes an image as either PNG or JPEG according to the extension of filePath and writes it to filePath.
+func WriteImageToFile(img image.Image, filePath string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	extension := path.Ext(filePath)
+
+	return WriteImage(img, file, extension)
 }
 
 // WriteFile writes data from an io.Reader to filePath
