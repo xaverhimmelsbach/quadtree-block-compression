@@ -46,6 +46,7 @@ func NewQuadtreeImage(baseImage image.Image, cfg *config.Config) *QuadtreeImage 
 }
 
 // Partition splits the BaseImage into an appropriate number of sub images and calls their partition method
+// TODO: Make this private and call it from Encode. Also rework Encode to work as a static function and handle creating the quadtree in there.
 func (q *QuadtreeImage) Partition() {
 	// Create root of the quadtree
 	rootImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
@@ -58,12 +59,35 @@ func (q *QuadtreeImage) Partition() {
 }
 
 // Encode encodes a quadtree image into a single buffer and returns it
-func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, error) {
+func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]io.Reader, error) {
 	fileBuffer := new(bytes.Buffer)
+	analyticsFiles := make(map[string]io.Reader)
+
+	// TODO: Do this right after partitioning
+	if q.config.VisualizationConfig.Enable {
+		boxVisualization := q.GetBoxImage(false)
+		boxVisualizationPadded := q.GetBoxImage(true)
+		blockVisualization := q.GetBlockImage(false)
+		blockVisualizationPadded := q.GetBlockImage(true)
+
+		boxVisualizationBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".jpg")
+		boxVisualizationPaddedBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".jpg")
+		blockVisualizationBuffer := new(bytes.Buffer)
+		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".jpg")
+		blockVisualizationPaddedBuffer := new(bytes.Buffer)
+		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".jpg")
+
+		analyticsFiles["boxVisualization.jpg"] = boxVisualizationBuffer
+		analyticsFiles["boxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
+		analyticsFiles["blockVisualization.jpg"] = blockVisualizationBuffer
+		analyticsFiles["blockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
+	}
 
 	archiveWriter, err := NewArchiveWriter(archiveMode, fileBuffer)
 	if err != nil {
-		return fileBuffer, err
+		return fileBuffer, &analyticsFiles, err
 	}
 
 	// Keep map of encoded blocks and their path in the archive for deduplication
@@ -73,12 +97,12 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, error) {
 	// Encode the tree root, which recurses further down the quadtree if needed
 	err = q.root.encode(archiveWriter, &encodedBlockPaths)
 	if err != nil {
-		return fileBuffer, err
+		return fileBuffer, &analyticsFiles, err
 	}
 
 	treeHeight, err := q.getHeight()
 	if err != nil {
-		return fileBuffer, err
+		return fileBuffer, &analyticsFiles, err
 	}
 
 	width := q.baseImage.Bounds().Dx()
@@ -92,12 +116,12 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, error) {
 
 	err = archiveWriter.WriteFile(MetaFile, metaBuffer)
 	if err != nil {
-		return fileBuffer, err
+		return fileBuffer, &analyticsFiles, err
 	}
 
 	// Close archiveWriter explicitly to flush all files to buffer
 	err = archiveWriter.Close()
-	return fileBuffer, err
+	return fileBuffer, &analyticsFiles, err
 }
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it

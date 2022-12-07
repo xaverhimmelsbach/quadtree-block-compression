@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
+	"time"
 
 	"github.com/h2non/filetype"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
@@ -16,6 +19,7 @@ func main() {
 	inputPath := flag.String("input", "", "Image to encode as quadtree")
 	outputPath := flag.String("output", "", "Path to write encoded file to")
 	configPath := flag.String("config", "config.yml", "Path to read program config from")
+	analyticsDir := flag.String("analyticsDir", "", "Directory to write analytics to")
 	flag.Parse()
 
 	// Load config
@@ -47,7 +51,7 @@ func main() {
 		quadtreeRoot.Partition()
 
 		// Encode quadtree structure
-		encoded, err := quadtreeRoot.Encode(quadtreeImage.ArchiveMode(cfg.Encoding.ArchiveFormat))
+		encoded, analyticsFiles, err := quadtreeRoot.Encode(quadtreeImage.ArchiveMode(cfg.Encoding.ArchiveFormat))
 		if err != nil {
 			panic(err)
 		}
@@ -57,20 +61,34 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("Encoded %s as a quadtree image and wrote it to %s", *inputPath, *outputPath)
+		fmt.Printf("Encoded %s as a quadtree image and wrote it to %s\n", *inputPath, *outputPath)
 
-		// Visualize quadtree structure
-		if cfg.VisualizationConfig.Enable {
-			boxVisualization := quadtreeRoot.GetBoxImage(false)
-			boxVisualizationPadded := quadtreeRoot.GetBoxImage(true)
-			blockVisualization := quadtreeRoot.GetBlockImage(false)
-			blockVisualizationPadded := quadtreeRoot.GetBlockImage(true)
+		if cfg.VisualizationConfig.Enable && len(*analyticsDir) > 0 {
+			// Create sub directory with current timestamp for currentAnalytics
+			timestamp := fmt.Sprint(time.Now().Unix())
+			currentAnalyticsDir := path.Join(*analyticsDir, timestamp)
 
-			utils.WriteImageToFile(boxVisualization, "boxVisualization.png")
-			utils.WriteImageToFile(boxVisualizationPadded, "boxVisualizationPadded.png")
-			utils.WriteImageToFile(blockVisualization, "blockVisualization.jpg")
-			utils.WriteImageToFile(blockVisualizationPadded, "blockVisualizationPadded.jpg")
+			err = os.MkdirAll(currentAnalyticsDir, 0755)
+			if err != nil {
+				panic(err)
+			}
+
+			// TODO: Write input & output files to analyticsDir
+
+			// Write encoding analytics if appropriate
+			if len(*analyticsFiles) > 0 {
+				for filename, reader := range *analyticsFiles {
+					filepath := path.Join(currentAnalyticsDir, filename)
+					err = utils.WriteFile(filepath, reader)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				fmt.Printf("Wrote analytics file to %s\n", currentAnalyticsDir)
+			}
 		}
+
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
 		quadtreeRoot, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)

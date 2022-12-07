@@ -1,10 +1,2 @@
 .vscode/
 .direnv/
-
-# Decoded/test files
-*.jpg
-*.png
-
-# Encoded files
-*.zip
-*.jpgf
