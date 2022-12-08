@@ -356,6 +356,7 @@ func (q *QuadtreeElement) decode(path string, fileContents *[]byte, remainingHei
 }
 
 // visualize returns its own blockImage if it has no children, else it returns its childrens blockImages
+// TODO: Cache results of previous visualize calls if children haven't changed
 func (q *QuadtreeElement) visualize() []VisualizationElement {
 	visualizations := make([]VisualizationElement, 0)
 

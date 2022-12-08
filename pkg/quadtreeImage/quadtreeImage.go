@@ -218,13 +218,8 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
 	visualizations := q.root.visualize()
 
-	// Choose correct inputImage
-	var inputImage image.Image
-	if padded {
-		inputImage = q.paddedImage
-	} else {
-		inputImage = q.baseImage
-	}
+	// Get background image
+	inputImage := q.GetBlockImage(padded)
 
 	// Copy inputImage onto boxImage
 	boxImage := image.NewRGBA(image.Rect(0, 0, inputImage.Bounds().Dx(), inputImage.Bounds().Dy()))
