@@ -79,10 +79,10 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 		blockVisualizationPaddedBuffer := new(bytes.Buffer)
 		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".jpg")
 
-		analyticsFiles["boxVisualization.jpg"] = boxVisualizationBuffer
-		analyticsFiles["boxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
-		analyticsFiles["blockVisualization.jpg"] = blockVisualizationBuffer
-		analyticsFiles["blockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
+		analyticsFiles["encodedBoxVisualization.jpg"] = boxVisualizationBuffer
+		analyticsFiles["encodedBoxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
+		analyticsFiles["encodedBlockVisualization.jpg"] = blockVisualizationBuffer
+		analyticsFiles["encodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
 	}
 
 	archiveWriter, err := NewArchiveWriter(archiveMode, fileBuffer)
@@ -125,36 +125,38 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 }
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it
-func Decode(quadtreePath string, outputPath string, cfg *config.Config) (image.Image, error) {
+func Decode(quadtreePath string, outputPath string, cfg *config.Config) (image.Image, *map[string]io.Reader, error) {
+	analyticsFiles := make(map[string]io.Reader)
+
 	archiveReader, err := OpenArchiveReader(quadtreePath)
 	if err != nil {
-		return nil, err
+		return nil, &analyticsFiles, err
 	}
 
 	// Parse metadata
 	metaBytes, err := archiveReader.Open(MetaFile)
 	if err != nil {
-		return nil, err
+		return nil, &analyticsFiles, err
 	}
 
 	meta := strings.Split(string(*metaBytes), "\n")
 	if len(meta) != 3 {
-		return nil, fmt.Errorf("meta file contained %d newline-seperated values instead of three", len(meta))
+		return nil, &analyticsFiles, fmt.Errorf("meta file contained %d newline-seperated values instead of three", len(meta))
 	}
 
 	treeHeight, err := strconv.Atoi(meta[0])
 	if err != nil {
-		return nil, err
+		return nil, &analyticsFiles, err
 	}
 
 	width, err := strconv.Atoi(meta[1])
 	if err != nil {
-		return nil, err
+		return nil, &analyticsFiles, err
 	}
 
 	height, err := strconv.Atoi(meta[2])
 	if err != nil {
-		return nil, err
+		return nil, &analyticsFiles, err
 	}
 
 	baseImage := image.NewRGBA(image.Rect(0, 0, width, height))
@@ -179,11 +181,32 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (image.I
 		// Decode file into quadtree
 		err = qti.root.decode(filename, fileContents, treeHeight, archiveReader)
 		if err != nil {
-			return nil, err
+			return nil, &analyticsFiles, err
 		}
 	}
 
-	return qti.GetBlockImage(false), nil
+	if qti.config.VisualizationConfig.Enable {
+		boxVisualization := qti.GetBoxImage(false)
+		boxVisualizationPadded := qti.GetBoxImage(true)
+		blockVisualization := qti.GetBlockImage(false)
+		blockVisualizationPadded := qti.GetBlockImage(true)
+
+		boxVisualizationBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".jpg")
+		boxVisualizationPaddedBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".jpg")
+		blockVisualizationBuffer := new(bytes.Buffer)
+		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".jpg")
+		blockVisualizationPaddedBuffer := new(bytes.Buffer)
+		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".jpg")
+
+		analyticsFiles["decodedBoxVisualization.jpg"] = boxVisualizationBuffer
+		analyticsFiles["decodedBoxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
+		analyticsFiles["decodedBlockVisualization.jpg"] = blockVisualizationBuffer
+		analyticsFiles["decodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
+	}
+
+	return qti.GetBlockImage(false), &analyticsFiles, nil
 }
 
 // GetBlockImage creates a representation of the image encoded in the quadtree.

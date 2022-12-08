@@ -85,15 +85,42 @@ func main() {
 					}
 				}
 
-				fmt.Printf("Wrote analytics file to %s\n", currentAnalyticsDir)
+				fmt.Printf("Wrote analytics files to %s\n", currentAnalyticsDir)
 			}
 		}
 
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
-		decodedImage, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
+		decodedImage, analyticsFiles, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
 		if err != nil {
 			panic(err)
+		}
+
+		// TODO: Create function for writing analytics
+		if cfg.VisualizationConfig.Enable && len(*analyticsDir) > 0 {
+			// Create sub directory with current timestamp for currentAnalytics
+			timestamp := fmt.Sprint(time.Now().Unix())
+			currentAnalyticsDir := path.Join(*analyticsDir, timestamp)
+
+			err = os.MkdirAll(currentAnalyticsDir, 0755)
+			if err != nil {
+				panic(err)
+			}
+
+			// TODO: Write input & output files to analyticsDir
+
+			// Write encoding analytics if appropriate
+			if len(*analyticsFiles) > 0 {
+				for filename, reader := range *analyticsFiles {
+					filepath := path.Join(currentAnalyticsDir, filename)
+					err = utils.WriteFile(filepath, reader)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				fmt.Printf("Wrote analytics files to %s\n", currentAnalyticsDir)
+			}
 		}
 
 		utils.WriteImageToFile(decodedImage, *outputPath)
