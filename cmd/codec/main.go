@@ -73,12 +73,12 @@ func main() {
 		// Write input and output files to analytics
 		if cfg.VisualizationConfig.Enable {
 			inputFilename := "input" + path.Ext(*inputPath)
+			outputFilename := "output" + path.Ext(*outputPath)
+
 			inputFile, err := os.Open(*inputPath)
 			if err != nil {
 				panic(err)
 			}
-
-			outputFilename := "output" + path.Ext(*outputPath)
 
 			(*analyticsFiles)[inputFilename] = inputFile
 			(*analyticsFiles)[outputFilename] = &encodedClone
@@ -88,13 +88,36 @@ func main() {
 
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
-		decodedImage, analyticsFiles, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
+		decoded, analyticsFiles, err := quadtreeImage.Decode(*inputPath, *outputPath, cfg)
 		if err != nil {
 			panic(err)
 		}
 
-		utils.WriteImageToFile(decodedImage, *outputPath)
+		// Create clone of decoded to write it to analytics as well
+		var decodedClone bytes.Buffer
+		decodedTee := io.TeeReader(decoded, &decodedClone)
+
+		// decodedTee has to be read before encodedClone
+		err = utils.WriteFile(*outputPath, decodedTee)
+		if err != nil {
+			panic(err)
+		}
+
 		fmt.Printf("Decoded %s and wrote it to %s", *inputPath, *outputPath)
+
+		// Write input and output files to analytics
+		if cfg.VisualizationConfig.Enable {
+			inputFilename := "input" + path.Ext(*inputPath)
+			outputFilename := "output" + path.Ext(*outputPath)
+
+			inputFile, err := os.Open(*inputPath)
+			if err != nil {
+				panic(err)
+			}
+
+			(*analyticsFiles)[inputFilename] = inputFile
+			(*analyticsFiles)[outputFilename] = &decodedClone
+		}
 
 		writeAnalytics(analyticsFiles, *analyticsDir, cfg.VisualizationConfig.Enable)
 	default:

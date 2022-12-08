@@ -125,7 +125,7 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 }
 
 // Decode decodes an encoded quadtree image and populates a quadtree with it
-func Decode(quadtreePath string, outputPath string, cfg *config.Config) (image.Image, *map[string]io.Reader, error) {
+func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Reader, *map[string]io.Reader, error) {
 	analyticsFiles := make(map[string]io.Reader)
 
 	archiveReader, err := OpenArchiveReader(quadtreePath)
@@ -206,7 +206,10 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (image.I
 		analyticsFiles["decodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
 	}
 
-	return qti.GetBlockImage(false), &analyticsFiles, nil
+	fileBuffer := new(bytes.Buffer)
+	utils.WriteImage(qti.GetBlockImage(false), fileBuffer, ".jpg")
+
+	return fileBuffer, &analyticsFiles, nil
 }
 
 // GetBlockImage creates a representation of the image encoded in the quadtree.
