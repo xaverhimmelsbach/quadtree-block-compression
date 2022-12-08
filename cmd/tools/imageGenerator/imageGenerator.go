@@ -1,4 +1,4 @@
-package tools
+package main
 
 import (
 	"bytes"
@@ -37,6 +37,10 @@ type SmallestBlockGenerator struct {
 
 type FilesizeMeta struct {
 	Size int
+}
+
+func main() {
+	generate()
 }
 
 func NewLargestBlockGenerator() *LargestBlockGenerator {
@@ -138,7 +142,3 @@ loop:
 		}
 	}
 }
-
-/* func main() {
-	generate()
-} */

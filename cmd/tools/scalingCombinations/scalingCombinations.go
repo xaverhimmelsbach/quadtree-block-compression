@@ -1,4 +1,4 @@
-package tools
+package main
 
 import (
 	"fmt"
@@ -9,6 +9,14 @@ import (
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 )
+
+func main() {
+	img, err := utils.ReadImage("test.jpg")
+	if err != nil {
+		panic(err)
+	}
+	scaleTest(img)
+}
 
 // scaleTest scales an input image down and up repeatedly with different interpolators and prints the similarity of each combination
 func scaleTest(img image.Image) {
