@@ -329,9 +329,10 @@ func (q *QuadtreeElement) decode(path string, fileContents *[]byte, remainingHei
 
 			// Create and append child without using NewQuadtreeElement as the block images are irrelevant during decoding
 			child := &QuadtreeElement{
-				id:        q.id + strconv.Itoa(i),
-				baseImage: childImage,
-				config:    q.config,
+				id:         q.id + strconv.Itoa(i),
+				baseImage:  childImage,
+				blockImage: childImage,
+				config:     q.config,
 			}
 			q.children = append(q.children, child)
 		}

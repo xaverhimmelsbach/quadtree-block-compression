@@ -233,7 +233,7 @@ func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
 	// Draw bounding boxes
 	for _, visualization := range visualizations {
 		// Skip skippable boxes for unpadded images
-		if padded || !visualization.canBeSkipped {
+		if visualization.image != nil && (padded || !visualization.canBeSkipped) {
 			utils.Rectangle(boxImage, visualization.image.Bounds().Min.X, visualization.image.Bounds().Max.X, visualization.image.Bounds().Min.Y, visualization.image.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
 		}
 	}
