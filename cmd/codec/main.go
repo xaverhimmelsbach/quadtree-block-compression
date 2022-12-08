@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -63,31 +64,7 @@ func main() {
 
 		fmt.Printf("Encoded %s as a quadtree image and wrote it to %s\n", *inputPath, *outputPath)
 
-		if cfg.VisualizationConfig.Enable && len(*analyticsDir) > 0 {
-			// Create sub directory with current timestamp for currentAnalytics
-			timestamp := fmt.Sprint(time.Now().Unix())
-			currentAnalyticsDir := path.Join(*analyticsDir, timestamp)
-
-			err = os.MkdirAll(currentAnalyticsDir, 0755)
-			if err != nil {
-				panic(err)
-			}
-
-			// TODO: Write input & output files to analyticsDir
-
-			// Write encoding analytics if appropriate
-			if len(*analyticsFiles) > 0 {
-				for filename, reader := range *analyticsFiles {
-					filepath := path.Join(currentAnalyticsDir, filename)
-					err = utils.WriteFile(filepath, reader)
-					if err != nil {
-						panic(err)
-					}
-				}
-
-				fmt.Printf("Wrote analytics files to %s\n", currentAnalyticsDir)
-			}
-		}
+		writeAnalytics(analyticsFiles, *analyticsDir, cfg.VisualizationConfig.Enable)
 
 	case filetype.IsArchive(inputBuffer):
 		fmt.Println("Decoding quadtree file")
@@ -96,36 +73,39 @@ func main() {
 			panic(err)
 		}
 
-		// TODO: Create function for writing analytics
-		if cfg.VisualizationConfig.Enable && len(*analyticsDir) > 0 {
-			// Create sub directory with current timestamp for currentAnalytics
-			timestamp := fmt.Sprint(time.Now().Unix())
-			currentAnalyticsDir := path.Join(*analyticsDir, timestamp)
-
-			err = os.MkdirAll(currentAnalyticsDir, 0755)
-			if err != nil {
-				panic(err)
-			}
-
-			// TODO: Write input & output files to analyticsDir
-
-			// Write encoding analytics if appropriate
-			if len(*analyticsFiles) > 0 {
-				for filename, reader := range *analyticsFiles {
-					filepath := path.Join(currentAnalyticsDir, filename)
-					err = utils.WriteFile(filepath, reader)
-					if err != nil {
-						panic(err)
-					}
-				}
-
-				fmt.Printf("Wrote analytics files to %s\n", currentAnalyticsDir)
-			}
-		}
-
 		utils.WriteImageToFile(decodedImage, *outputPath)
 		fmt.Printf("Decoded %s and wrote it to %s", *inputPath, *outputPath)
+
+		writeAnalytics(analyticsFiles, *analyticsDir, cfg.VisualizationConfig.Enable)
 	default:
 		panic("filetype is neither image nor archive")
+	}
+}
+
+func writeAnalytics(analyticsFiles *map[string]io.Reader, analyticsDir string, analyticsEnabled bool) {
+	if analyticsEnabled && len(analyticsDir) > 0 {
+		// Create sub directory with current timestamp for currentAnalytics
+		timestamp := fmt.Sprint(time.Now().Unix())
+		currentAnalyticsDir := path.Join(analyticsDir, timestamp)
+
+		err := os.MkdirAll(currentAnalyticsDir, 0755)
+		if err != nil {
+			panic(err)
+		}
+
+		// TODO: Write input & output files to analyticsDir
+
+		// Write encoding analytics if appropriate
+		if len(*analyticsFiles) > 0 {
+			for filename, reader := range *analyticsFiles {
+				filepath := path.Join(currentAnalyticsDir, filename)
+				err = utils.WriteFile(filepath, reader)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			fmt.Printf("Wrote analytics files to %s\n", currentAnalyticsDir)
+		}
 	}
 }
