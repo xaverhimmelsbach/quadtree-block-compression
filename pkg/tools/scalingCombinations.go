@@ -7,7 +7,7 @@ import (
 
 	drawX "golang.org/x/image/draw"
 
-	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 )
 
 // scaleTest scales an input image down and up repeatedly with different interpolators and prints the similarity of each combination

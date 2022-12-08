@@ -12,7 +12,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/xaverhimmelsbach/quadtree-block-compression/utils"
+	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 )
 
 type Result[T any] struct {
