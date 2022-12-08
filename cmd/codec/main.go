@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -57,12 +58,31 @@ func main() {
 			panic(err)
 		}
 
-		err = utils.WriteFile(*outputPath, encoded)
+		// Create clone of encoded to write it to analytics as well
+		var encodedClone bytes.Buffer
+		encodedTee := io.TeeReader(encoded, &encodedClone)
+
+		// encodedTee has to be read before encodedClone
+		err = utils.WriteFile(*outputPath, encodedTee)
 		if err != nil {
 			panic(err)
 		}
 
 		fmt.Printf("Encoded %s as a quadtree image and wrote it to %s\n", *inputPath, *outputPath)
+
+		// Write input and output files to analytics
+		if cfg.VisualizationConfig.Enable {
+			inputFilename := "input" + path.Ext(*inputPath)
+			inputFile, err := os.Open(*inputPath)
+			if err != nil {
+				panic(err)
+			}
+
+			outputFilename := "output" + path.Ext(*outputPath)
+
+			(*analyticsFiles)[inputFilename] = inputFile
+			(*analyticsFiles)[outputFilename] = &encodedClone
+		}
 
 		writeAnalytics(analyticsFiles, *analyticsDir, cfg.VisualizationConfig.Enable)
 
