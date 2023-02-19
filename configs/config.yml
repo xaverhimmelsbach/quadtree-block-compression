@@ -13,14 +13,14 @@ Encoding:
   ArchiveFormat: "gzip"
   SkipOutOfBoundsBlocks:
     # Should blocks that are not visible be skipped during encoding
-    Enable: True
+    Enable: False
   DeduplicateBlocks:
     # Should similar blocks be deduplicated during encoding?
-    Enable: True
+    Enable: False
     # How similar do blocks have to be to be deduplicated?
     MinimalSimilarity: 0.9
 
 # Visualization Config
 Visualization:
   # Should the visualizations be created?
-  Enable: True
+  Enable: False
