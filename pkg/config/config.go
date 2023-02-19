@@ -29,8 +29,9 @@ type DeduplicateBlocksConfig struct {
 
 type EncodingConfig struct {
 	//Underlying archive format of the encoded file
-	// TODO: Document accepted values
-	ArchiveFormat         string                      `yaml:"ArchiveFormat"`
+	ArchiveFormat string `yaml:"ArchiveFormat"`
+	// Should the program run in parallel?
+	Parallelism           bool                        `yaml:"Parallelism"`
 	SkipOutOfBoundsBlocks SkipOutOfBoundsBlocksConfig `yaml:"SkipOutOfBoundsBlocks"`
 	DeduplicateBlocks     DeduplicateBlocksConfig     `yaml:"DeduplicateBlocks"`
 }

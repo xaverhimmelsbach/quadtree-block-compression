@@ -11,6 +11,8 @@ Quadtree:
 Encoding:
   # Underlying archive format of the encoded file
   ArchiveFormat: "gzip"
+  # Should the program run in parallel?
+  Parallelism: False
   SkipOutOfBoundsBlocks:
     # Should blocks that are not visible be skipped during encoding
     Enable: False

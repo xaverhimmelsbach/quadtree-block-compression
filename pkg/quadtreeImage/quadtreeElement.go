@@ -8,6 +8,7 @@ import (
 	"image/jpeg"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/h2non/filetype"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
@@ -70,8 +71,11 @@ func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Re
 }
 
 // partition splits the BaseImage into ChildCount subimages if further partitioning is required, and calls their partition methods
-func (q *QuadtreeElement) partition() {
+func (q *QuadtreeElement) partition(parentWg *sync.WaitGroup) {
 	q.children = make([]*QuadtreeElement, 0)
+
+	// WaitGroup for use in parallelized partition
+	var wg sync.WaitGroup
 
 	if !q.isLeaf {
 		// Partition BaseImage into sub images
@@ -101,6 +105,8 @@ func (q *QuadtreeElement) partition() {
 				yEnd = q.baseImage.Bounds().Max.Y
 			}
 
+			// TODO: The next 4 lines are some of the most expensive code in the codebase.
+			// Currently they are all executed in the same thread and parallelized by calling the childrens nodes partition method in parallel. This is not optimal.
 			// Copy BaseImage section to sub image
 			childImage := image.NewRGBA(image.Rect(xStart, yStart, xEnd, yEnd))
 			draw.Draw(childImage, childImage.Bounds(), q.baseImage, childImage.Bounds().Min, draw.Src)
@@ -108,8 +114,21 @@ func (q *QuadtreeElement) partition() {
 			// Create and partition child
 			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.existingBlocks, q.config)
 			q.children = append(q.children, child)
-			child.partition()
+
+			// If parallelism is enabled, partition all children in their own gothread
+			if q.config.Encoding.Parallelism && parentWg != nil {
+				wg.Add(1)
+				go child.partition(&wg)
+			} else {
+				child.partition(nil)
+			}
 		}
+	}
+
+	// If parallelism is enabled, wait for all children to complete partition and signal completion to parent
+	if q.config.Encoding.Parallelism && parentWg != nil {
+		wg.Wait()
+		parentWg.Done()
 	}
 }
 

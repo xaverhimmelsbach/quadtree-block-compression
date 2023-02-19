@@ -10,6 +10,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
@@ -54,8 +55,17 @@ func (q *QuadtreeImage) Partition() {
 	globalBounds := q.baseImage.Bounds()
 	q.root = NewQuadtreeElement("", rootImage, &globalBounds, q.existingBlocks, q.config)
 
+	// WaitGroup for use in parallelized partition
+	var wg sync.WaitGroup
+
+	if q.config.Encoding.Parallelism {
+		wg.Add(1)
+	}
+
 	// Start partitioning the quadtree
-	q.root.partition()
+	q.root.partition(&wg)
+
+	wg.Wait()
 }
 
 // Encode encodes a quadtree image into a single buffer and returns it
