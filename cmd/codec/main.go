@@ -20,7 +20,7 @@ func main() {
 	// Parse arguments
 	inputPath := flag.String("input", "", "Image to encode as quadtree")
 	outputPath := flag.String("output", "", "Path to write encoded file to")
-	configPath := flag.String("config", "config.yml", "Path to read program config from")
+	configPath := flag.String("config", "", "Path to read program config from")
 	analyticsDir := flag.String("analyticsDir", "", "Directory to write analytics to")
 	flag.Parse()
 
