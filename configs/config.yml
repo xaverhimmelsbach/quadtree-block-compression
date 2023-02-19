@@ -22,6 +22,10 @@ Encoding:
     # How similar do blocks have to be to be deduplicated?
     MinimalSimilarity: 0.9
 
+Decoding:
+  # Should the program run in parallel?
+  Parallelism: False
+
 # Visualization Config
 Visualization:
   # Should the visualizations be created?

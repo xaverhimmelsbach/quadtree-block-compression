@@ -46,6 +46,8 @@ type QuadtreeElement struct {
 	config *config.Config
 	// Unique identifier of this QuadtreeElement
 	id string
+	// Handle multiple threads operating on the same element during decoding
+	decodingMutex sync.Mutex
 }
 
 // VisualizationElement holds an image section and additional information relevant during visualization
@@ -315,6 +317,9 @@ func (q *QuadtreeElement) decode(path string, fileContents *[]byte, remainingHei
 		return fmt.Errorf("further partitioning according to path %s would lead to remaining height being smaller than 0 in %s", path, q.id)
 	}
 
+	// Only one thread is allowed to create children
+	// TODO: other possibility: Wrap this block into a sync.Once(func)
+	q.decodingMutex.Lock()
 	// If children haven't been created yet, create them
 	if len(q.children) != ChildCount {
 		// TODO: More or less duplicate code fragment
@@ -356,6 +361,7 @@ func (q *QuadtreeElement) decode(path string, fileContents *[]byte, remainingHei
 			q.children = append(q.children, child)
 		}
 	}
+	q.decodingMutex.Unlock()
 
 	// Get next child from path
 	splitPath := strings.Split(path, "/")

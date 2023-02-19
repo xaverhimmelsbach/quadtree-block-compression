@@ -63,6 +63,7 @@ func (q *QuadtreeImage) Partition() {
 	}
 
 	// Start partitioning the quadtree
+	// TODO: Handle this like in decode to avoid passing the waitGroup to partition
 	q.root.partition(&wg)
 
 	wg.Wait()
@@ -181,17 +182,47 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Read
 		baseImage: qti.paddedImage,
 	}
 
+	var errorMap map[string]error = make(map[string]error)
+	var wg sync.WaitGroup
+	var mapWriteMutex sync.Mutex
+
 	// Iterate over archive contents and decode them
-	for filename, fileContents := range archiveReader.Files() {
+	for fn, fc := range archiveReader.Files() {
+
+		// Copy filename and contents to avoid memory corruption on parallelized runs
+		filename := fn
+		fileContents := make([]byte, len(*fc))
+		copy(fileContents, *fc)
+
 		// Skip metadata file
 		if filename == MetaFile {
 			continue
 		}
 
 		// Decode file into quadtree
-		err = qti.root.decode(filename, fileContents, treeHeight, archiveReader)
-		if err != nil {
-			return nil, &analyticsFiles, err
+		if qti.config.Decoding.Parallelism {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				err = qti.root.decode(filename, &fileContents, treeHeight, archiveReader)
+
+				// Write result to errorMap
+				mapWriteMutex.Lock()
+				errorMap[filename] = err
+				mapWriteMutex.Unlock()
+			}()
+		} else {
+			errorMap[filename] = qti.root.decode(filename, &fileContents, treeHeight, archiveReader)
+		}
+	}
+
+	wg.Wait()
+
+	// Return first error found in errorMap, if any
+	for _, e := range errorMap {
+		if e != nil {
+			return nil, &analyticsFiles, e
 		}
 	}
 

@@ -36,6 +36,11 @@ type EncodingConfig struct {
 	DeduplicateBlocks     DeduplicateBlocksConfig     `yaml:"DeduplicateBlocks"`
 }
 
+type DecodingConfig struct {
+	// Should the program run in parallel?
+	Parallelism bool `yaml:"Parallelism"`
+}
+
 type VisualizationConfig struct {
 	// Should the visualizations be created?
 	Enable bool `yaml:"Enable"`
@@ -45,6 +50,7 @@ type VisualizationConfig struct {
 type Config struct {
 	Quadtree            QuadtreeConfig      `yaml:"Quadtree"`
 	Encoding            EncodingConfig      `yaml:"Encoding"`
+	Decoding            DecodingConfig      `yaml:"Decoding"`
 	VisualizationConfig VisualizationConfig `yaml:"Visualization"`
 }
 
