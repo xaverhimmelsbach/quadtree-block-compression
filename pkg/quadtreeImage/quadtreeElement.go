@@ -56,6 +56,7 @@ type QuadtreeElement struct {
 type VisualizationElement struct {
 	// Image section
 	image        image.Image
+	minimalImage *image.Image
 	canBeSkipped bool
 }
 
@@ -393,7 +394,7 @@ func (q *QuadtreeElement) visualize() []VisualizationElement {
 	visualizations := make([]VisualizationElement, 0)
 
 	if len(q.children) == 0 {
-		visualizations = append(visualizations, VisualizationElement{image: q.blockImage, canBeSkipped: q.canBeSkipped})
+		visualizations = append(visualizations, VisualizationElement{image: q.blockImage, minimalImage: q.blockImageMinimal, canBeSkipped: q.canBeSkipped})
 	} else {
 		for _, child := range q.children {
 			visualizations = append(visualizations, child.visualize()...)

@@ -8,10 +8,12 @@ import (
 	"image/draw"
 	"io"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/PerformLine/go-stockutil/colorutil"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/config"
 	"github.com/xaverhimmelsbach/quadtree-block-compression/pkg/utils"
 )
@@ -78,8 +80,10 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 
 	// TODO: Do this right after partitioning
 	if q.config.VisualizationConfig.Enable {
-		boxVisualization := q.GetBoxImage(false)
-		boxVisualizationPadded := q.GetBoxImage(true)
+		boxVisualization := q.GetBoxImage(false, false)
+		boxVisualizationPadded := q.GetBoxImage(true, false)
+		boxGroupVisualization := q.GetBoxImage(false, true)
+		boxGroupVisualizationPadded := q.GetBoxImage(true, true)
 		blockVisualization := q.GetBlockImage(false)
 		blockVisualizationPadded := q.GetBlockImage(true)
 
@@ -87,6 +91,10 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".jpg")
 		boxVisualizationPaddedBuffer := new(bytes.Buffer)
 		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".jpg")
+		boxGroupVisualizationBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxGroupVisualization, boxGroupVisualizationBuffer, ".jpg")
+		boxGroupVisualizationPaddedBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxGroupVisualizationPadded, boxGroupVisualizationPaddedBuffer, ".jpg")
 		blockVisualizationBuffer := new(bytes.Buffer)
 		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".jpg")
 		blockVisualizationPaddedBuffer := new(bytes.Buffer)
@@ -94,6 +102,8 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 
 		analyticsFiles["encodedBoxVisualization.jpg"] = boxVisualizationBuffer
 		analyticsFiles["encodedBoxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
+		analyticsFiles["encodedBoxGroupVisualization.jpg"] = boxGroupVisualizationBuffer
+		analyticsFiles["encodedBoxGroupVisualizationPadded.jpg"] = boxGroupVisualizationPaddedBuffer
 		analyticsFiles["encodedBlockVisualization.jpg"] = blockVisualizationBuffer
 		analyticsFiles["encodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
 	}
@@ -229,8 +239,10 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Read
 	}
 
 	if qti.config.VisualizationConfig.Enable {
-		boxVisualization := qti.GetBoxImage(false)
-		boxVisualizationPadded := qti.GetBoxImage(true)
+		boxVisualization := qti.GetBoxImage(false, false)
+		boxVisualizationPadded := qti.GetBoxImage(true, false)
+		boxGroupVisualization := qti.GetBoxImage(false, true)
+		boxGroupVisualizationPadded := qti.GetBoxImage(true, true)
 		blockVisualization := qti.GetBlockImage(false)
 		blockVisualizationPadded := qti.GetBlockImage(true)
 
@@ -238,6 +250,10 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Read
 		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".jpg")
 		boxVisualizationPaddedBuffer := new(bytes.Buffer)
 		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".jpg")
+		boxGroupVisualizationBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxGroupVisualization, boxGroupVisualizationBuffer, ".jpg")
+		boxGroupVisualizationPaddedBuffer := new(bytes.Buffer)
+		utils.WriteImage(boxGroupVisualizationPadded, boxGroupVisualizationPaddedBuffer, ".jpg")
 		blockVisualizationBuffer := new(bytes.Buffer)
 		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".jpg")
 		blockVisualizationPaddedBuffer := new(bytes.Buffer)
@@ -245,6 +261,8 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Read
 
 		analyticsFiles["decodedBoxVisualization.jpg"] = boxVisualizationBuffer
 		analyticsFiles["decodedBoxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
+		analyticsFiles["decodedBoxGroupVisualization.jpg"] = boxGroupVisualizationBuffer
+		analyticsFiles["decodedBoxGroupVisualizationPadded.jpg"] = boxGroupVisualizationPaddedBuffer
 		analyticsFiles["decodedBlockVisualization.jpg"] = blockVisualizationBuffer
 		analyticsFiles["decodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
 	}
@@ -284,8 +302,52 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 
 // GetBoxImage creates a representation of the bounding boxes of the quadtree.
 // If padded is true, the padding area around the original image is included as well.
-func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
+// If deduplicated is true, groups of deduplicated blocks should be colored the same
+func (q *QuadtreeImage) GetBoxImage(padded bool, deduplicated bool) image.Image {
 	visualizations := q.root.visualize()
+
+	blockImageGroups := make(map[*image.Image]int)
+	coloredBlockImageGroups := make(map[*image.Image]color.Color)
+
+	if deduplicated {
+		// Get number of distinct blocks
+		for _, visualization := range visualizations {
+			_, ok := blockImageGroups[visualization.minimalImage]
+			if !ok {
+				blockImageGroups[visualization.minimalImage] = 1
+			} else {
+				blockImageGroups[visualization.minimalImage] = blockImageGroups[visualization.minimalImage] + 1
+			}
+		}
+
+		groupCount := 0
+
+		for _, count := range blockImageGroups {
+			if count > 1 {
+				groupCount = groupCount + 1
+			}
+		}
+
+		groupIndex := 0
+
+		// Assign colors
+		for block, count := range blockImageGroups {
+			if count == 1 {
+				// Blocks that are used just once get assigned black
+				coloredBlockImageGroups[block] = color.RGBA{A: 255}
+			} else {
+				progress := float64(groupIndex) / float64(groupCount)
+
+				// Random saturation and value from 0.6 to 1.0
+				saturation := rand.Float64()*0.4 + 0.6
+				value := rand.Float64()*0.4 + 0.6
+
+				R, G, B := colorutil.HsvToRgb(360*progress, saturation, value)
+				coloredBlockImageGroups[block] = color.RGBA{A: 255, R: R, G: G, B: B}
+				groupIndex = groupIndex + 1
+			}
+		}
+	}
 
 	// Get background image
 	inputImage := q.GetBlockImage(padded)
@@ -298,7 +360,14 @@ func (q *QuadtreeImage) GetBoxImage(padded bool) image.Image {
 	for _, visualization := range visualizations {
 		// Skip skippable boxes for unpadded images
 		if visualization.image != nil && (padded || !visualization.canBeSkipped) {
-			utils.Rectangle(boxImage, visualization.image.Bounds().Min.X, visualization.image.Bounds().Max.X, visualization.image.Bounds().Min.Y, visualization.image.Bounds().Max.Y, color.RGBA{R: 255, A: 255})
+
+			fillColor := color.RGBA{}
+
+			if deduplicated {
+				fillColor = coloredBlockImageGroups[visualization.minimalImage].(color.RGBA)
+			}
+
+			utils.Rectangle(boxImage, visualization.image.Bounds(), color.RGBA{R: 255, A: 255}, fillColor)
 		}
 	}
 

@@ -28,11 +28,12 @@ func VerticalLine(img *image.RGBA, yStart int, yEnd int, x int, c color.Color) {
 }
 
 // Rectangle draws a rectangle onto an image
-func Rectangle(img *image.RGBA, xStart int, xEnd int, yStart int, yEnd int, c color.Color) {
-	HorizontalLine(img, xStart, xEnd, yStart, c)
-	HorizontalLine(img, xStart, xEnd, yEnd, c)
-	VerticalLine(img, yStart, yEnd, xStart, c)
-	VerticalLine(img, yStart, yEnd, xEnd, c)
+func Rectangle(img *image.RGBA, rectangle image.Rectangle, c color.Color, fillColor color.Color) {
+	draw.Draw(img, rectangle, &image.Uniform{fillColor}, rectangle.Min, draw.Over)
+	HorizontalLine(img, rectangle.Min.X, rectangle.Max.X, rectangle.Min.Y, c)
+	HorizontalLine(img, rectangle.Min.X, rectangle.Max.X, rectangle.Max.Y, c)
+	VerticalLine(img, rectangle.Min.Y, rectangle.Max.Y, rectangle.Min.X, c)
+	VerticalLine(img, rectangle.Min.Y, rectangle.Max.Y, rectangle.Max.X, c)
 }
 
 // Scale scales a given image to the desired dimensions
