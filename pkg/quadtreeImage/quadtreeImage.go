@@ -80,10 +80,10 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 
 	// TODO: Do this right after partitioning
 	if q.config.VisualizationConfig.Enable {
-		boxVisualization := q.GetBoxImage(false, false)
-		boxVisualizationPadded := q.GetBoxImage(true, false)
-		boxGroupVisualization := q.GetBoxImage(false, true)
-		boxGroupVisualizationPadded := q.GetBoxImage(true, true)
+		boxVisualization, _ := q.GetBoxImage(false, false, nil)
+		boxVisualizationPadded, _ := q.GetBoxImage(true, false, nil)
+		boxGroupVisualization, palette := q.GetBoxImage(false, true, nil)
+		boxGroupVisualizationPadded, _ := q.GetBoxImage(true, true, palette)
 		blockVisualization := q.GetBlockImage(false)
 		blockVisualizationPadded := q.GetBlockImage(true)
 
@@ -239,10 +239,10 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Read
 	}
 
 	if qti.config.VisualizationConfig.Enable {
-		boxVisualization := qti.GetBoxImage(false, false)
-		boxVisualizationPadded := qti.GetBoxImage(true, false)
-		boxGroupVisualization := qti.GetBoxImage(false, true)
-		boxGroupVisualizationPadded := qti.GetBoxImage(true, true)
+		boxVisualization, _ := qti.GetBoxImage(false, false, nil)
+		boxVisualizationPadded, _ := qti.GetBoxImage(true, false, nil)
+		boxGroupVisualization, palette := qti.GetBoxImage(false, true, nil)
+		boxGroupVisualizationPadded, _ := qti.GetBoxImage(true, true, palette)
 		blockVisualization := qti.GetBlockImage(false)
 		blockVisualizationPadded := qti.GetBlockImage(true)
 
@@ -303,13 +303,16 @@ func (q *QuadtreeImage) GetBlockImage(padded bool) image.Image {
 // GetBoxImage creates a representation of the bounding boxes of the quadtree.
 // If padded is true, the padding area around the original image is included as well.
 // If deduplicated is true, groups of deduplicated blocks should be colored the same
-func (q *QuadtreeImage) GetBoxImage(padded bool, deduplicated bool) image.Image {
+// The used palette is returned. It can be passed in further calls and thus be used again to color the same blocks in the same way.
+func (q *QuadtreeImage) GetBoxImage(padded bool, deduplicated bool, palette map[*image.Image]color.Color) (image.Image, map[*image.Image]color.Color) {
 	visualizations := q.root.visualize()
 
 	blockImageGroups := make(map[*image.Image]int)
 	coloredBlockImageGroups := make(map[*image.Image]color.Color)
 
-	if deduplicated {
+	if palette != nil {
+		coloredBlockImageGroups = palette
+	} else if deduplicated {
 		// Get number of distinct blocks
 		for _, visualization := range visualizations {
 			_, ok := blockImageGroups[visualization.minimalImage]
@@ -371,7 +374,7 @@ func (q *QuadtreeImage) GetBoxImage(padded bool, deduplicated bool) image.Image 
 		}
 	}
 
-	return boxImage
+	return boxImage, coloredBlockImageGroups
 }
 
 // pad adds transparent padding to a copy of BaseImage to make it a square with an edge length that can be divided by a multiple of four to get a JPEG block
