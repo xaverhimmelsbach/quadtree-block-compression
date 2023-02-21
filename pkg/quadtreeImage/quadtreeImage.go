@@ -88,24 +88,24 @@ func (q *QuadtreeImage) Encode(archiveMode ArchiveMode) (io.Reader, *map[string]
 		blockVisualizationPadded := q.GetBlockImage(true)
 
 		boxVisualizationBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".jpg")
+		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".png")
 		boxVisualizationPaddedBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".jpg")
+		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".png")
 		boxGroupVisualizationBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxGroupVisualization, boxGroupVisualizationBuffer, ".jpg")
+		utils.WriteImage(boxGroupVisualization, boxGroupVisualizationBuffer, ".png")
 		boxGroupVisualizationPaddedBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxGroupVisualizationPadded, boxGroupVisualizationPaddedBuffer, ".jpg")
+		utils.WriteImage(boxGroupVisualizationPadded, boxGroupVisualizationPaddedBuffer, ".png")
 		blockVisualizationBuffer := new(bytes.Buffer)
-		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".jpg")
+		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".png")
 		blockVisualizationPaddedBuffer := new(bytes.Buffer)
-		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".jpg")
+		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".png")
 
-		analyticsFiles["encodedBoxVisualization.jpg"] = boxVisualizationBuffer
-		analyticsFiles["encodedBoxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
-		analyticsFiles["encodedBoxGroupVisualization.jpg"] = boxGroupVisualizationBuffer
-		analyticsFiles["encodedBoxGroupVisualizationPadded.jpg"] = boxGroupVisualizationPaddedBuffer
-		analyticsFiles["encodedBlockVisualization.jpg"] = blockVisualizationBuffer
-		analyticsFiles["encodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
+		analyticsFiles["encodedBoxVisualization.png"] = boxVisualizationBuffer
+		analyticsFiles["encodedBoxVisualizationPadded.png"] = boxVisualizationPaddedBuffer
+		analyticsFiles["encodedBoxGroupVisualization.png"] = boxGroupVisualizationBuffer
+		analyticsFiles["encodedBoxGroupVisualizationPadded.png"] = boxGroupVisualizationPaddedBuffer
+		analyticsFiles["encodedBlockVisualization.png"] = blockVisualizationBuffer
+		analyticsFiles["encodedBlockVisualizationPadded.png"] = blockVisualizationPaddedBuffer
 	}
 
 	archiveWriter, err := NewArchiveWriter(archiveMode, fileBuffer)
@@ -247,28 +247,28 @@ func Decode(quadtreePath string, outputPath string, cfg *config.Config) (io.Read
 		blockVisualizationPadded := qti.GetBlockImage(true)
 
 		boxVisualizationBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".jpg")
+		utils.WriteImage(boxVisualization, boxVisualizationBuffer, ".png")
 		boxVisualizationPaddedBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".jpg")
+		utils.WriteImage(boxVisualizationPadded, boxVisualizationPaddedBuffer, ".png")
 		boxGroupVisualizationBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxGroupVisualization, boxGroupVisualizationBuffer, ".jpg")
+		utils.WriteImage(boxGroupVisualization, boxGroupVisualizationBuffer, ".png")
 		boxGroupVisualizationPaddedBuffer := new(bytes.Buffer)
-		utils.WriteImage(boxGroupVisualizationPadded, boxGroupVisualizationPaddedBuffer, ".jpg")
+		utils.WriteImage(boxGroupVisualizationPadded, boxGroupVisualizationPaddedBuffer, ".png")
 		blockVisualizationBuffer := new(bytes.Buffer)
-		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".jpg")
+		utils.WriteImage(blockVisualization, blockVisualizationBuffer, ".png")
 		blockVisualizationPaddedBuffer := new(bytes.Buffer)
-		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".jpg")
+		utils.WriteImage(blockVisualizationPadded, blockVisualizationPaddedBuffer, ".png")
 
-		analyticsFiles["decodedBoxVisualization.jpg"] = boxVisualizationBuffer
-		analyticsFiles["decodedBoxVisualizationPadded.jpg"] = boxVisualizationPaddedBuffer
-		analyticsFiles["decodedBoxGroupVisualization.jpg"] = boxGroupVisualizationBuffer
-		analyticsFiles["decodedBoxGroupVisualizationPadded.jpg"] = boxGroupVisualizationPaddedBuffer
-		analyticsFiles["decodedBlockVisualization.jpg"] = blockVisualizationBuffer
-		analyticsFiles["decodedBlockVisualizationPadded.jpg"] = blockVisualizationPaddedBuffer
+		analyticsFiles["decodedBoxVisualization.png"] = boxVisualizationBuffer
+		analyticsFiles["decodedBoxVisualizationPadded.png"] = boxVisualizationPaddedBuffer
+		analyticsFiles["decodedBoxGroupVisualization.png"] = boxGroupVisualizationBuffer
+		analyticsFiles["decodedBoxGroupVisualizationPadded.png"] = boxGroupVisualizationPaddedBuffer
+		analyticsFiles["decodedBlockVisualization.png"] = blockVisualizationBuffer
+		analyticsFiles["decodedBlockVisualizationPadded.png"] = blockVisualizationPaddedBuffer
 	}
 
 	fileBuffer := new(bytes.Buffer)
-	utils.WriteImage(qti.GetBlockImage(false), fileBuffer, ".jpg")
+	utils.WriteImage(qti.GetBlockImage(false), fileBuffer, ".png")
 
 	return fileBuffer, &analyticsFiles, nil
 }
