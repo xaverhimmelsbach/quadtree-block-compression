@@ -26,6 +26,8 @@ type QuadtreeImage struct {
 	root *QuadtreeElement
 	// List of all currently existing quadtree blocks of size BlockSize
 	existingBlocks **[]*image.Image
+	// Regulate access to existingBlocks
+	existingBlocksMutex sync.RWMutex
 	// Program configuration
 	config *config.Config
 }
@@ -53,7 +55,7 @@ func (q *QuadtreeImage) Partition() {
 	rootImage := image.NewRGBA(image.Rect(0, 0, q.paddedImage.Bounds().Max.X, q.paddedImage.Bounds().Max.Y))
 	draw.Draw(rootImage, rootImage.Bounds(), q.paddedImage, q.paddedImage.Bounds().Min, draw.Src)
 	globalBounds := q.baseImage.Bounds()
-	q.root = NewQuadtreeElement("", rootImage, &globalBounds, q.existingBlocks, q.config)
+	q.root = NewQuadtreeElement("", rootImage, &globalBounds, q.existingBlocks, &q.existingBlocksMutex, q.config)
 
 	// WaitGroup for use in parallelized partition
 	var wg sync.WaitGroup

@@ -38,6 +38,8 @@ type QuadtreeElement struct {
 	globalBounds *image.Rectangle
 	// List of all currently existing quadtree blocks of size BlockSize
 	existingBlocks **[]*image.Image
+	// Regulate access to existingBlocks
+	existingBlocksMutex *sync.RWMutex
 	// Is this QuadtreeElement a leaf and does it therefore contain an actual blockImage?
 	isLeaf bool
 	// Can this block be skipped during encoding?
@@ -58,7 +60,7 @@ type VisualizationElement struct {
 }
 
 // NewQuadtreeElement returns a fully populated QuadtreeImage occupying the space of baseImage
-func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Rectangle, existingBlocks **[]*image.Image, cfg *config.Config) *QuadtreeElement {
+func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Rectangle, existingBlocks **[]*image.Image, existingBlocksMutex *sync.RWMutex, cfg *config.Config) *QuadtreeElement {
 	qte := new(QuadtreeElement)
 
 	qte.id = id
@@ -66,6 +68,7 @@ func NewQuadtreeElement(id string, baseImage image.Image, globalBounds *image.Re
 	qte.baseImage = baseImage
 	qte.globalBounds = globalBounds
 	qte.existingBlocks = existingBlocks
+	qte.existingBlocksMutex = existingBlocksMutex
 	qte.blockImage, qte.blockImageMinimal = qte.createBlockImages()
 	qte.isLeaf, qte.canBeSkipped = qte.checkIsLeaf()
 
@@ -114,7 +117,7 @@ func (q *QuadtreeElement) partition(parentWg *sync.WaitGroup) {
 			draw.Draw(childImage, childImage.Bounds(), q.baseImage, childImage.Bounds().Min, draw.Src)
 
 			// Create and partition child
-			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.existingBlocks, q.config)
+			child := NewQuadtreeElement(q.id+strconv.Itoa(i), childImage, q.globalBounds, q.existingBlocks, q.existingBlocksMutex, q.config)
 			q.children = append(q.children, child)
 
 			// If parallelism is enabled, partition all children in their own gothread
@@ -175,6 +178,7 @@ func (q *QuadtreeElement) createBlockImages() (image.Image, *image.Image) {
 		var bestBlockRGBA *image.RGBA
 
 		// Compare existing blocks with current block
+		q.existingBlocksMutex.RLock()
 		for _, otherImage := range **q.existingBlocks {
 			otherImageRGBA := (*otherImage).(*image.RGBA)
 
@@ -191,6 +195,7 @@ func (q *QuadtreeElement) createBlockImages() (image.Image, *image.Image) {
 				bestBlockRGBA = otherImageRGBA
 			}
 		}
+		q.existingBlocksMutex.RUnlock()
 
 		// If a block was found that is sufficiently similar
 		if bestBlock != nil && bestSimilarity >= q.config.Encoding.DeduplicateBlocks.MinimalSimilarity {
@@ -206,8 +211,10 @@ func (q *QuadtreeElement) createBlockImages() (image.Image, *image.Image) {
 
 	// Add to global blocks
 	// Take detour over pointer pointer as not to invalidate pointers to globalBlocks in other quadtreeImages
+	q.existingBlocksMutex.Lock()
 	newBlocks := append(**q.existingBlocks, &downsampledImage)
 	*q.existingBlocks = &newBlocks
+	q.existingBlocksMutex.Unlock()
 
 	return blockImage, &downsampledImage
 }
