@@ -125,13 +125,40 @@ func main() {
 	}
 }
 
+func directoryExists(directory string) (bool, error) {
+	if _, err := os.Stat(directory); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return true, err
+		}
+	}
+	return true, nil
+}
+
 func writeAnalytics(analyticsFiles *map[string]io.Reader, analyticsDir string, analyticsEnabled bool) {
 	if analyticsEnabled && len(analyticsDir) > 0 {
 		// Create sub directory with current timestamp for currentAnalytics
 		timestamp := fmt.Sprint(time.Now().Unix())
 		currentAnalyticsDir := path.Join(analyticsDir, timestamp)
 
-		err := os.MkdirAll(currentAnalyticsDir, 0755)
+		// Try to create valid directory, if one already exists for the current timestamp by appending a number
+		i := 0
+
+		exists, err := directoryExists(currentAnalyticsDir)
+		for exists {
+			if err != nil {
+				panic(err)
+			}
+
+			currentAnalyticsDir = path.Join(analyticsDir, fmt.Sprintf("%s_%d", timestamp, i))
+			i = i + 1
+
+			// A bit dumb to have this line twice, but err must be checked...
+			exists, err = directoryExists(currentAnalyticsDir)
+		}
+
+		err = os.MkdirAll(currentAnalyticsDir, 0755)
 		if err != nil {
 			panic(err)
 		}
