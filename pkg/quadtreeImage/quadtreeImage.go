@@ -392,7 +392,7 @@ func (q *QuadtreeImage) pad() image.Image {
 
 	// Pad until the padding is greater than both sides of the BaseImage
 	for paddedSideLength < longerSideLength {
-		paddedSideLength *= ChildCount
+		paddedSideLength *= 2
 	}
 
 	// Copy BaseImage over padded image
